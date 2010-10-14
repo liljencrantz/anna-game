@@ -1,0 +1,8 @@
+*~
+liblua
+\#*
+*.d
+*.o
+gmon.out
+anna
+tile_test

@@ -1,0 +1,1367 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <limits.h>
+#include <strings.h>
+#include <assert.h>
+
+#include <GL/gl.h>	
+ 
+#include "util.h"
+#include "common.h"
+#include "render.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#define ALT_COLOUR 0
+#define WIREFRAME 0
+#define MAX_LOD 10
+
+/* 
+ * 0.5 = Interpolera jämt
+ * 1.0 = Interpolera aldrig
+ */
+#define THRESHOLD 0.8f
+
+#define POP_STEPS 256
+#define INTERPOLATION_SIZE 100000
+
+/*
+  This structure is used for caching the calculated height for a given
+  position.  The cache is partially filled during node_traverse, the
+  rest is done in find_top_usage and find_border_usage.
+*/
+
+typedef struct
+{
+    unsigned short value;
+    short count;
+    heightmap_element_t *data;
+    int id;
+} heightmap_cache_t;
+
+typedef struct
+{
+    GLfloat vertex[3];
+    int use;
+} render_element_t;
+
+static heightmap_element_t interpolation_arr[INTERPOLATION_SIZE];
+static int interpolation_pos;
+
+static GLfloat target_quality;
+static GLfloat offset_x, offset_y;
+static GLfloat coord_scale;
+
+static t_node_t **current_node_arr;
+static heightmap_element_t **heightmap;
+static int heightmap_width;
+static scene_t *current_scene;
+static tile_t *current_tile;
+
+typedef tile_t *tile_ptr;
+static tile_ptr current_tile_arr[3][3];
+
+static heightmap_cache_t *cache_arr;
+static int cache_id=1;
+
+void render_terrain_init( scene_t *s )
+{
+    cache_arr=calloc( sizeof(heightmap_cache_t), 
+		      ((1<<(s->lod_max+1))+1)*((1<<(s->lod_max+1))+1) );
+}
+
+/* Returns a pointer to a heightmap_element_t,
+   which is valid until the end of the current rendering pass
+*/
+static heightmap_element_t *get_temp_element()
+{
+    assert( interpolation_pos < INTERPOLATION_SIZE );
+    return &interpolation_arr[interpolation_pos++];
+}
+
+static inline GLfloat get_dist( int id, 
+				int level )
+{
+    int node_width = 1<<level;
+    int node_scale = current_tile->lod-level-1;
+    int x_id = ((1|2*(id & (node_width-1)))<<node_scale);
+    int y_id = ((1|(id >> (level-1)))<<node_scale);
+//	GLfloat d = 0.75*(1<<(current_tile->lod-level+1));
+    GLfloat x = coord_scale*x_id+offset_x-current_scene->camera.pos[0];
+    GLfloat y = coord_scale*y_id+offset_y-current_scene->camera.pos[1];
+/*	GLfloat z = heightmap[current_tile->lod-1][(x_id+y_id*heightmap_width)].height -
+	current_scene->camera.pos[2];*/
+    return maxf( 1.0, sqrt(x*x + y*y));
+}
+
+
+/* The id:s of the children, in counterclockwise order, starting from the southeast (west?) corner */
+static void get_children( int id, 
+			  int level, 
+			  int *child_id )
+{
+    int mask = (1<<level)-1;
+    int x_id = (id & mask);
+    int y_id = id >> level;
+
+    int y_add = 2<<level;
+    int new_id = (x_id << 1)+(y_id<<(2+level));
+
+    child_id[0]=new_id;
+    child_id[1]=new_id + 1;
+    child_id[2]=new_id + 1 + y_add;
+    child_id[3]=new_id + y_add;
+}
+
+static void get_children_border( int id, 
+				 int level,
+				 int border,
+				 int *child_id )
+{
+    int i;
+	
+    int all_children[4];
+
+    get_children( id, level, all_children );
+    for( i=0; i<4; i++ )
+	assert( all_children[i] < 1000000 );
+	
+    switch( border )
+    {
+	case NORTH:
+	    child_id[0]=all_children[3];
+	    child_id[1]=all_children[2];
+	    break;
+			
+	case WEST:
+	    child_id[0]=all_children[0];
+	    child_id[1]=all_children[3];
+	    break;
+			
+	case SOUTH:
+	    child_id[0]=all_children[0];
+	    child_id[1]=all_children[1];
+	    break;
+			
+	case EAST:
+	    child_id[0]=all_children[2];
+	    child_id[1]=all_children[1];
+	    break;
+	default:
+	    assert(0);
+			
+    }
+}
+
+
+
+static inline void get_corners( int id,
+				int level,
+				int *pos )
+{
+    int node_width = 1<<level;
+    int x_id = 1+2*(id & (node_width-1));
+    int y_id = 1+2*(id >> level);
+    int node_scale = current_tile->lod-level-1;
+    pos[0] = (x_id-1 + (y_id-1)*heightmap_width) << node_scale;
+    pos[1] = (x_id+1 + (y_id-1)*heightmap_width) << node_scale;
+    pos[2] = (x_id+1 + (y_id+1)*heightmap_width) << node_scale;
+    pos[3] = (x_id-1 + (y_id+1)*heightmap_width) << node_scale;
+}
+
+static void get_node_pos_internal( int id, 
+				   int level,
+				   int *pos,
+				   int *mid, 
+				   int target_lod )
+{
+    int node_width = 1<<level;
+    int x_id = 1+2*(id & (node_width-1));
+    int y_id = 1+2*(id >> level);
+    int hm_width = (1<<(target_lod))+1;		
+	
+    int node_scale = target_lod-level-1;
+    int base = (x_id + (y_id)*hm_width)<<node_scale;
+    int x_diff = 1<<node_scale;
+    int y_diff = heightmap_width << node_scale;
+
+    pos[0] = base - x_diff;
+    pos[1] = base - x_diff - y_diff;
+    pos[2] = base - y_diff;
+    pos[3] = base + x_diff - y_diff;
+    pos[4] = base + x_diff;
+    pos[5] = base + x_diff + y_diff;
+    pos[6] = base + y_diff;
+    pos[7] = base - x_diff + y_diff;
+    pos[8] = pos[0];
+
+    *mid = base;
+}
+
+static void get_node_pos( int id, 
+			  int level,
+			  int *pos,
+			  int *mid )
+{
+    get_node_pos_internal( id,
+			   level,
+			   pos, 
+			   mid,
+			   current_tile->lod );
+}
+
+static void get_border_pos(int id, 
+			   int level,
+			   int border,
+			   int *pos )
+{
+    int all_pos[9];
+    int mid_pos;
+	
+    get_node_pos_internal( id,
+			   level, 
+			   all_pos, 
+			   &mid_pos,
+			   MAX_LOD );
+	
+    switch( border )
+    {
+	case NORTH:
+	    pos[0] = all_pos[7];
+	    pos[1] = all_pos[6];
+	    pos[2] = all_pos[5];
+	    break;
+			
+	case SOUTH:
+	    pos[0] = all_pos[1];
+	    pos[1] = all_pos[2];
+	    pos[2] = all_pos[3];
+	    break;
+			
+	case WEST:
+	    pos[0] = all_pos[1];
+	    pos[1] = all_pos[0];
+	    pos[2] = all_pos[7];
+	    break;
+			
+	case EAST:
+	    pos[0] = all_pos[3];
+	    pos[1] = all_pos[4];
+	    pos[2] = all_pos[5];
+	    break;
+    }
+}
+
+
+static inline int render_tile( int x, int y )
+{
+    return 0;
+}
+
+
+static inline void interpolate_elements( heightmap_element_t *e1, 
+					 heightmap_element_t *e2, 
+					 GLfloat fraction_1, 
+					 heightmap_element_t *res )
+{
+    int j;
+    GLfloat fraction_2 = 1.0f - fraction_1;
+/*
+  for( j=0; j<3; j++ )
+  {
+  res->colour.vec[j] = 
+  e1->colour.vec[j]*fraction_1+e2->colour.vec[j]*fraction_2;
+  }
+*/
+    res->height=e1->height*fraction_1+e2->height*fraction_2;
+}
+
+
+static inline void interpolate_elements_2( heightmap_element_t *e1,
+					   heightmap_element_t *e2,
+					   heightmap_element_t *res )
+{
+    unsigned int col1, col2;
+    res->height=0.5f*(e1->height+e2->height);
+/*
+  col1 = (e1->colour.i&(~0x01010101))>>1;
+  col2 = (e2->colour.i&(~0x01010101))>>1;
+  res->colour.i=(col1 + col2);
+*/
+}
+
+static inline void interpolate_r_elements_2( render_element_t *e1,
+					     render_element_t *e2,
+					     heightmap_element_t *res )
+{
+    unsigned int col1, col2;
+    res->height=0.5f*(e1->vertex[2]+e2->vertex[2]);
+/*
+  col1 = (e1->colour.i&(~0x01010101))>>1;
+  col2 = (e2->colour.i&(~0x01010101))>>1;
+  res->colour.i=(col1 + col2);
+*/
+}
+
+
+static heightmap_element_t *get_element( int pos, int level, int str )
+{
+    if( str == POP_STEPS )
+    {
+	int x,y, new_x, new_y;
+	int node_scale;
+	int lod_heightmap_width;
+	int new_pos;
+      
+	if( level == current_tile->lod-1 )
+	{
+	    return &heightmap[level][pos];
+	}
+	else
+	{
+	    x = pos % heightmap_width;
+	    y = pos / heightmap_width;
+	    node_scale = current_tile->lod-level-1;
+	    new_x = x>>node_scale;
+	    new_y= y>>node_scale;
+	    lod_heightmap_width=(1<<(level+1))+1;
+	    new_pos = new_x+new_y*lod_heightmap_width;
+
+	    return &heightmap[level][new_pos];
+	}
+    }
+    else
+    {	   
+	heightmap_element_t *high = get_element( pos,
+						 level, 
+						 POP_STEPS);
+	heightmap_element_t *low = get_element( pos,
+						maxi(0,level-1),
+						POP_STEPS);
+	heightmap_element_t *res = get_temp_element();
+
+	GLfloat fraction_1 = (GLfloat)str*(1.0f/POP_STEPS);
+	interpolate_elements( high, low, fraction_1, res );
+
+	return res;
+    }
+}
+
+static heightmap_element_t *get_element_2( int pos,
+					   int pos_x, 
+					   int pos_y, 
+					   int level,
+					   int str )
+{
+    if( str == POP_STEPS )
+    {
+	int new_x, new_y;
+	int node_scale;
+	int lod_heightmap_width;
+	int new_pos;
+      
+	if( level == current_tile->lod-1 )
+	{
+	    return &heightmap[level][pos];
+	}
+	else
+	{
+	    node_scale = current_tile->lod-level-1;
+	    new_x = pos_x>>node_scale;
+	    new_y= pos_y>>node_scale;
+	    lod_heightmap_width=(1<<(level+1))+1;
+	    new_pos = new_x+new_y*lod_heightmap_width;
+	    return &heightmap[level][new_pos];
+	}
+    }
+    else
+    {	   
+	heightmap_element_t *high = get_element( pos, level, POP_STEPS);
+	heightmap_element_t *low = get_element( pos, maxi(0,level-1), POP_STEPS);
+	heightmap_element_t *res = get_temp_element();
+	GLfloat fraction_1 = (GLfloat)str*(1.0f/POP_STEPS);
+	interpolate_elements( high, low, fraction_1, res );
+	return res;
+    }
+}
+
+
+static inline GLfloat get_quality( int id,
+				   int level )
+{
+    t_node_t *n=&current_node_arr[level][id];   
+    GLfloat l = n->dist;
+    GLfloat d = 1<<(current_scene->lod_max-level);
+    GLfloat c = current_scene->render_quality;
+    GLfloat divisor = d*c*n->d2;
+    GLfloat f = l/(divisor);
+//    printf( "%f %f %f %f\n", l, d, n->d2, f );
+    return f;
+}
+
+static inline int is_visible( int id,
+			      int level )
+{
+    int i, j;
+    int pos[9];
+    int mid_pos;
+    int visible;
+    t_node_t *n=&current_node_arr[level][id];
+
+    n->dist = get_dist(id, level);   
+    get_node_pos( id, level, pos, &mid_pos );
+	
+    for( i=0; i<3; i++ ){
+	GLfloat k = current_scene->camera.k[i];
+	GLfloat m = current_scene->camera.m[i];
+	int side = current_scene->camera.side[i];
+	visible=0;
+	for( j=1; j<8; j+= 2 )
+	{
+	    GLfloat node_x = coord_scale*(pos[j]%heightmap_width)+offset_x;
+	    GLfloat node_y = coord_scale*(pos[j]/heightmap_width)+offset_y;
+	    GLfloat proj_y = node_x*k + m;		 
+	    if(i==2)
+	    {
+//			printf("%f %f\n", proj_y, node_y );
+	    }
+	    if( side )
+		visible |=  proj_y <= node_y ;
+	    else
+		visible |=  proj_y >= node_y ;
+	}
+	if( !visible )
+	{
+	    return 0;
+	}
+    }
+	
+    return 1;
+}
+
+static void traverse_node( int id,
+			   int level,
+			   float prev_f )
+{
+    t_node_t *n = &current_node_arr[level][id];   
+
+    int child_id[4];
+    float f;
+	
+    int visible=is_visible( id, level );
+//	visible=1;
+	
+    if( visible )
+	f = get_quality( id, level);
+    else
+	f = 2.0;
+	
+    if( f>=1.0  )
+    {
+	n->render_strength = mini( POP_STEPS,
+				   maxi( 1, (1.0f-prev_f) / THRESHOLD * POP_STEPS) );
+
+    }
+    else
+    {
+	int i;
+	get_children( id, level, child_id );
+	n->render_strength = 0;
+	for( i=0; i<4; i++ )
+	{
+	    traverse_node( child_id[i], level+1, f );
+	}
+    }
+}
+
+static void cache_element( int pos, 
+			   heightmap_element_t *e,
+			   int value, 
+			   int count )
+{
+    heightmap_cache_t *c = &cache_arr[pos];
+    
+    if( c->id != cache_id )
+    {
+	c->id=cache_id;
+	c->count=count;
+	c->value=value;
+	c->data=e;
+    }
+    else
+    {
+	c->count += count;
+	if( value < c->value )
+	{
+	    c->value = value;
+	    c->data = e;
+	}
+    }
+}
+
+static void cache_swipe()
+{
+    cache_id++;
+}
+
+static void cache_leaf( int id, 
+			int level, 
+			int str)
+{
+    int pos[9];
+    int mid;
+    int i;
+    int value;
+    value = (level<<8) + str;
+   
+
+    get_node_pos( id, level, pos, &mid );
+    for( i=1; i<9; i+=2 )
+    {
+	cache_element( pos[i],
+		       get_element( pos[i], level, str ),
+		       value,
+		       1 );
+    }
+	
+    if( str == POP_STEPS )
+    {
+	for( i=0; i<8; i+=2 )
+	{
+	    cache_element( pos[i],
+			   get_element( pos[i], level, str ),
+			   value,
+			   2 );
+	}   
+    }
+    else
+    {
+	for( i=0; i<8; i+=2 )
+	{
+	    int id_1=(i+7)%8;
+	    int id_2=i+1;
+	    heightmap_element_t *org_1=get_element( pos[id_1], 
+						    maxi(level-1,0),
+						    POP_STEPS );
+	    heightmap_element_t *org_2=get_element( pos[id_2],
+						    maxi(level-1,0),
+						    POP_STEPS );
+	    heightmap_element_t *res=get_temp_element();
+	    interpolate_elements_2( org_1, org_2, res );
+			
+	    interpolate_elements( get_element( pos[i], level, POP_STEPS ), 
+				  res, 
+				  (GLfloat)str*(1.0f/POP_STEPS),
+				  res );
+	    cache_element( pos[i],
+			   res,
+			   value,
+			   2 );
+	}
+    }
+}
+
+static void cache_node( int id, 
+			int level )
+{
+    t_node_t *n = &current_node_arr[level][id];   
+    if( n->render_strength > 0 )
+    {
+	cache_leaf( id, level, n->render_strength );
+    }
+    else
+    {
+	int i;
+	int child_id[4];
+	get_children( id, level, child_id );
+	for( i=0; i<4; i++ )
+	{
+	    cache_node( child_id[i], level+1 );
+	}
+    }
+}
+
+static void find_top_usage( int grid_x,
+			    int grid_y,
+			    int can_skip,
+			    int insert_pos,
+			    tile_t *search_tile )
+{
+    static int top_usage_arr[256];
+    int i;
+    int arr_pos = 0, arr_pos_2 = 0;
+    int node_width, node_scale;
+    int x_id;
+    int y_id;
+    int child_id[4];
+    int id, level;
+    t_node_t *self;
+	
+    top_usage_arr[arr_pos++]=0;
+    top_usage_arr[arr_pos++]=0;
+
+//	printf( "Söker efter koord %d %d\n", grid_x, grid_y );
+//	printf( "heightmap_width == %d\n", heightmap_width );	
+
+    while( arr_pos!=arr_pos_2)
+    {
+	level = top_usage_arr[arr_pos_2++];
+	id = top_usage_arr[arr_pos_2++];
+		
+	node_width = 1<<level;
+	node_scale = search_tile->lod-level-1;
+	x_id = (1|2*(id & (node_width-1)))<<node_scale;
+	y_id = (1|2*(id >> level))<<node_scale;
+		
+//		printf( "Leker med nod %d %d (koord %d %d)\n", level, id, x_id, y_id );		
+		
+	self = &current_node_arr[level][id];	
+		
+	if( self->render_strength >0 )
+	{
+	    int search_pos = grid_x + grid_y*heightmap_width;
+	    int pos_1, pos_2;
+	    int top, divisor;
+	    GLfloat fraction;
+	    int pos[9];
+	    int mid_pos=-1;  
+
+	    heightmap_element_t *el;
+	    heightmap_element_t *org_1;
+	    heightmap_element_t *org_2;
+
+/*			if( self->render_strength == POP_STEPS )
+			{
+			cache_arr[insert_pos].count = 4;
+			arr_pos = arr_pos_2;
+			continue;				
+			}
+*/		
+	    get_node_pos( id, level, pos, &mid_pos );
+				   
+	    if( pos[1]/heightmap_width == grid_y )
+	    {
+		/* Interpolate along lower x-axis */
+		if( pos[2]%heightmap_width > grid_x )
+		{
+		    pos_1 = pos[1];
+		    pos_2 = pos[2];					
+		}
+		else
+		{
+		    pos_1 = pos[2];
+		    pos_2 = pos[3];
+		}
+	    }
+	    else if( pos[5]/heightmap_width == grid_y )
+	    {
+		/* interpolate along upper x-axis */	
+		if( pos[6]%heightmap_width > grid_x )
+		{
+		    pos_1 = pos[7];
+		    pos_2 = pos[6];					
+		}
+		else
+		{
+		    pos_1 = pos[6];
+		    pos_2 = pos[5];
+		}
+	    }
+	    else if( pos[1]%heightmap_width == grid_x )
+	    {
+		/* Interpolate along left y-axis */
+		if( pos[0]/heightmap_width > grid_y )
+		{
+		    pos_1 = pos[1];
+		    pos_2 = pos[0];					
+		}
+		else
+		{
+		    pos_1 = pos[0];
+		    pos_2 = pos[7];
+		}
+	    }
+	    else if( pos[5]%heightmap_width == grid_x )
+	    {
+		/* Interpolate along right y-axis */
+		if( pos[4]/heightmap_width > grid_y )
+		{
+		    pos_1 = pos[3];
+		    pos_2 = pos[4];					
+		}
+		else
+		{
+		    pos_1 = pos[4];
+		    pos_2 = pos[5];
+		}
+	    }
+	    else
+	    {
+		printf( "Omöjlig interpolation! söker efter %d %d bland platserna:\n"
+			"(%d %d) (%d %d) (%d %d) (%d %d) (%d %d) (%d %d) (%d %d) (%d %d) \n",
+			grid_x, grid_y,
+			pos[0]%heightmap_width, pos[0]/heightmap_width,
+			pos[1]%heightmap_width, pos[1]/heightmap_width,
+			pos[2]%heightmap_width, pos[2]/heightmap_width,
+			pos[3]%heightmap_width, pos[3]/heightmap_width,
+			pos[4]%heightmap_width, pos[4]/heightmap_width,
+			pos[5]%heightmap_width, pos[5]/heightmap_width,
+			pos[6]%heightmap_width, pos[6]/heightmap_width,
+			pos[7]%heightmap_width, pos[7]/heightmap_width
+		    );
+		exit(0);
+	    }
+			
+	    top=search_pos-pos_1;
+	    divisor=pos_2-pos_1;
+			
+	    if(( top == 0 ) ||(top==divisor))
+	    {
+		continue;
+	    }
+//			printf( "Löv värde %d\n", increment );
+			
+	    org_1 = get_element( pos_1, level, self->render_strength );
+	    org_2 = get_element( pos_2, level, self->render_strength );
+	    assert( org_1 != 0 );
+	    assert( org_2 != 0 );
+	    assert( top > 0 );
+	    assert( top < divisor );
+			
+	    el = get_temp_element();
+	    if( (top<<1)==divisor)
+	    {
+		interpolate_elements_2( org_1, org_2,  el );
+	    }
+	    else
+	    {
+		fraction = ((GLfloat)top)/divisor;
+		interpolate_elements( org_1, org_2, fraction, el );
+	    }
+	    cache_element( insert_pos,
+			   el,
+			   (level<<8) + self->render_strength,
+			   2 );
+
+	    arr_pos = arr_pos_2;
+	}
+	else
+	{
+	    int directions[4];	
+	    int dx, dy;
+
+	    directions[0]=directions[1]=directions[2]=directions[3]=1;		
+	    dx = (grid_x-x_id);
+	    dy = (grid_y-y_id);
+			
+//			printf( "Inre\n" );
+			
+	    if( dx < 0 )
+	    {
+		directions[1]=0;
+		directions[2]=0;
+	    }
+	    if( dx > 0 )
+	    {
+		directions[0]=0;
+		directions[3]=0;
+	    }
+	    if( dy < 0 )
+	    {
+		directions[3]=0;
+		directions[2]=0;
+	    }
+	    if( dy > 0 )
+	    {
+		directions[0]=0;
+		directions[1]=0;
+	    }
+//			printf( "dx dy = %d %d\n", dx, dy );
+			
+	    get_children( id, level, child_id );
+	    for( i=0; i<4; i++ )
+	    {
+		if( directions[i] )
+		{
+//					printf( "Lägger till %d %d\n", level+1, child_id[i] );					
+		    top_usage_arr[arr_pos++]=level+1;
+		    top_usage_arr[arr_pos++]=child_id[i];
+		}
+	    }
+	}
+    }
+//	cache_arr[insert_pos].count=4;
+	
+}
+
+void find_border_usage( int grid_pos,
+			int border,
+			int can_skip,
+			int insert_pos,
+			tile_t *search_tile )
+{
+    static int q[256];
+	
+    int i;
+    int qpos = 0;
+    int qpos2 = 0;
+    int child_id[4];
+    int id, level;
+    int pos[3];
+    int value;
+	
+    t_node_t *self;
+
+    q[qpos++]=0;
+    q[qpos++]=0;
+/*	
+	printf( "Searching for pos %d along border %d at tile %d %d\n", 
+	grid_pos, 
+	border, 
+	search_tile->x, 
+	search_tile->y );	
+*/
+    while( qpos!=qpos2)
+    {
+	int done = 0;
+		
+	level = q[qpos2++];
+	id = q[qpos2++];
+		
+	get_border_pos( id, level, search_tile->lod, pos );
+//		printf( "a %d %d\n", level, id );
+		
+	self = &search_tile->node_arr[level][id];	
+	value = (level<<8) + self->render_strength;
+		
+//		printf( "Strength %d\n",  self->render_strength );		
+
+	if( self->render_strength > 0 )
+	{			
+//			printf( "a1\n" );
+	    for( i=0; i<3; i++ )
+	    {
+		if( grid_pos == pos[i] )
+		{
+		    cache_element( insert_pos,
+				   get_element( pos[i], 
+						level,
+						self->render_strength ),
+				   value,
+				   1 );
+		    done = 1;
+		    break;
+		}				
+	    }
+	    if( !done )
+	    {
+		// Jobbigt...
+	    }
+			
+
+	}
+	else
+	{
+	    get_children_border( id, level, border, child_id );
+//			printf( "pushing childen with level %d, pos %d %d from parent %d %d\n", level+1, child_id[0], child_id[1], level, id );
+	    if( grid_pos == pos[1] )
+	    {
+		q[qpos++]=level+1;
+		q[qpos++]=child_id[0];
+		q[qpos++]=level+1;
+		q[qpos++]=child_id[1];
+	    }
+	    else
+	    {
+		if( grid_pos > pos[1] )
+		{
+		    q[qpos++]=level+1;
+		    q[qpos++]=child_id[1];
+		}
+		else
+		{
+		    q[qpos++]=level+1;
+		    q[qpos++]=child_id[0];
+		}
+	    }
+	}
+    }
+//	printf( "whee\n" );
+
+}
+
+static int calc_side( int orig_val, 
+		      int orig_lod )
+{
+    return orig_val << (MAX_LOD-orig_lod);
+}
+
+static void get_top_usage_2( int pos, 
+			     int can_skip )
+{
+    if( cache_arr[pos].id != cache_id || cache_arr[pos].count < 4 )
+    {
+		
+	int x = pos % heightmap_width;
+	int y = pos / heightmap_width;
+	int max = heightmap_width-1;
+		
+	if(( x==0 )&&(y==0))
+	{
+	    cache_arr[pos].count =4;
+	    return;
+	}
+
+	if( (x==max)&&(y==0))
+	{
+	    cache_arr[pos].count =4;
+	    return;			
+	}
+
+	if( (x==0)&&(y==max))
+	{
+	    cache_arr[pos].count =4;
+	    return;			
+	}
+
+	if( (x==max)&&(y==max))
+	{
+	    cache_arr[pos].count =4;
+	    return;			
+	}
+
+	if( x==0 )
+	{
+	    if( (current_tile_arr[0][1] != 0) )
+	    {	
+		if( (current_tile_arr[0][1]->state == TILE_READY) )
+		{
+		    find_border_usage( calc_side( y, 
+						  current_tile_arr[1][1]->lod ),
+				       EAST,
+				       can_skip,
+				       pos,
+				       current_tile_arr[0][1] );
+		}
+	    }			
+	    cache_arr[pos].count =4;
+	    return;			
+	}
+
+	if( x==max )
+	{
+	    if( (current_tile_arr[2][1] != 0) )
+	    {	
+		if( (current_tile_arr[2][1]->state == TILE_READY) )
+		{
+		    find_border_usage( calc_side( y, 
+						  current_tile_arr[1][1]->lod ),
+				       WEST,
+				       can_skip,
+				       pos,
+				       current_tile_arr[2][1] );
+		}
+	    }			
+	    cache_arr[pos].count =4;
+	    return;			
+	}
+
+	if( y==0 )
+	{
+	    if( (current_tile_arr[1][0] != 0) )
+	    {	
+		if( (current_tile_arr[1][0]->state == TILE_READY) )
+		{
+		    find_border_usage( calc_side( x, 
+						  current_tile_arr[1][1]->lod ),
+				       NORTH, //??
+				       can_skip,
+				       pos,
+				       current_tile_arr[1][0] );
+		}
+	    }			
+	    cache_arr[pos].count =4;
+	    return;			
+	}
+
+	if( y==max )
+	{
+	    if( (current_tile_arr[1][2] != 0) )
+	    {	
+		if( (current_tile_arr[1][2]->state == TILE_READY) )
+		{
+		    find_border_usage( calc_side( x, 
+						  current_tile_arr[1][1]->lod ),
+				       SOUTH,//??
+				       can_skip,
+				       pos,
+				       current_tile_arr[1][2] );
+		}
+	    }			
+	    cache_arr[pos].count =4;
+	    return;			
+	}
+		
+	if( !can_skip )
+	{
+//			printf( "Boinkar\n" );	
+//			cache_arr[pos].count=0;
+			
+	    find_top_usage( x,
+			    y,
+			    can_skip,
+			    pos,
+			    current_tile_arr[1][1] );
+	}
+    }
+
+/*	if( cache_arr[pos].id != cache_id )
+	{
+	printf( "Gick åt skogen vid position %d %d\n", pos, can_skip );
+	exit( 0 );	   
+	}*/
+}
+
+static heightmap_element_t *get_top_usage( int pos, 
+					   int can_skip )
+{
+    if( cache_arr[pos].id != cache_id || cache_arr[pos].count < 4 )
+    {
+//		printf( "kör top_usage på %d\n", pos );
+	get_top_usage_2( pos, can_skip );
+    }
+    if( (cache_arr[pos].count != 4) && (!can_skip) )
+    {
+	printf( "top_usage misslyckades på %d %d (%d) \n", pos%heightmap_width, pos/heightmap_width, cache_arr[pos].count );
+	exit(0);
+    }
+    if( can_skip && (cache_arr[pos].count != 4))
+	return 0;
+    else
+	return cache_arr[pos].data;
+}
+
+static void get_heightmap_elements( 
+    int id, 
+    int level,
+    int str, 
+    render_element_t *elements, 
+    render_element_t *mid_element )
+{
+    int pos[9];
+    int mid_pos;
+    int i;
+    
+    heightmap_element_t *tmp;
+    get_node_pos( id, level, pos, &mid_pos );
+    
+    for( i=1; i<8; i+=2 )
+    {
+	elements[i].use=1;
+	tmp=get_top_usage(pos[i], 0);
+	elements[i].vertex[0]=coord_scale*(pos[i]%heightmap_width)+offset_x;
+	elements[i].vertex[1]=coord_scale*(pos[i]/heightmap_width)+offset_y;
+	elements[i].vertex[2]=tmp->height;
+//	elements[i].colour=tmp->colour;
+    }
+    for( i=0; i<8; i+=2 )
+    {
+	elements[i].use=0;
+	tmp=get_top_usage(pos[i], 1);
+	if( tmp != 0 )
+	{
+	    elements[i].vertex[0]=coord_scale*(pos[i]%heightmap_width)+offset_x;
+	    elements[i].vertex[1]=coord_scale*(pos[i]/heightmap_width)+offset_y;
+	    elements[i].vertex[2]=tmp->height;
+//	    elements[i].colour=tmp->colour;
+	    elements[i].use=1;
+	}
+    }
+    
+    if( elements[0].use )
+	memcpy( &elements[8], &elements[0], sizeof( render_element_t ) );
+    else
+	memcpy( &elements[8], &elements[1], sizeof( render_element_t ) );
+    
+    if( str == POP_STEPS )
+    {
+	tmp=get_element( mid_pos, level,  POP_STEPS );	
+	(*mid_element).vertex[0]=coord_scale*(mid_pos%heightmap_width)+offset_x;
+	(*mid_element).vertex[1]=coord_scale*(mid_pos/heightmap_width)+offset_y;
+	(*mid_element).vertex[2]=tmp->height;
+//	(*mid_element).colour=tmp->colour;
+    }
+    else
+    {
+	int node_width = 1<<level;
+	int x_id = (id & (node_width-1));
+	int y_id = (id >> level);
+	heightmap_element_t *a, *base;
+	a=get_temp_element();
+	
+	base = get_element( mid_pos, level,  POP_STEPS );
+	if( (x_id^y_id) & 0x1 )
+	    interpolate_r_elements_2( &elements[3], &elements[7],  a );
+	else
+	    interpolate_r_elements_2( &elements[1], &elements[5], a );
+	interpolate_elements(  base, a, (GLfloat)str*(1.0f/POP_STEPS), a );
+	
+	(*mid_element).vertex[0]=coord_scale*(mid_pos%heightmap_width)+offset_x;
+	(*mid_element).vertex[1]=coord_scale*(mid_pos/heightmap_width)+offset_y;
+	(*mid_element).vertex[2]=a->height;
+//	(*mid_element).colour=a->colour;
+    }
+}
+
+static GLfloat *get_colour( int level, 
+			    int str )
+{
+    GLfloat colour_arr[8][3]=
+	{
+	    {
+		1, 0, 0
+	    }
+	    ,
+	    {
+		1,1,0
+	    }
+	    ,
+	    {
+		0,1,0
+	    }
+	    ,
+	    {
+		0,1,1
+	    }
+	    ,
+	    {
+		0,0,1
+	    }
+	    ,
+	    {
+		1,0,1
+	    }
+	    ,
+	    {
+		0, 0, 0
+	    }
+	    ,
+	    {
+		1, 1, 1
+	    }
+	}
+    ;
+    static GLfloat res[3];
+    int high = level%8;
+    int low = maxi(0,(level-1)%8);
+    GLfloat fraction_1=(GLfloat)str*(1.0f/POP_STEPS);
+    GLfloat fraction_2=1.0-fraction_1;
+    int i;
+	
+    for( i=0; i<3; i++ )
+	res[i]=colour_arr[low][i]*fraction_2+colour_arr[high][i]*fraction_1;	
+    return res;
+}
+/*
+  GLAPI void APIENTRY glVertex3fv( const GLfloat *a )
+  {
+  printf( "Pos %f %f %f\n", a[0], a[1], a[2] );
+  glVertex3f( a[0], a[1], a[2] );
+  }*/
+
+static void vertex_perspective( float *vertex, float *pos)
+{
+    float a = vertex[0]-pos[0];
+    float b = vertex[1]-pos[1];
+    float c = a*a+b*b;
+    
+    glVertex3f( vertex[0], vertex[1], vertex[2]-0.002*c );
+}
+
+void calc_el_color(render_element_t *el, view_t *view, GLfloat *out)
+{
+    out[0] = out[1] = out[2] = 0.5;
+}
+
+
+
+
+static void render_node( int id, 
+			 int level,
+			 scene_t *s)
+{
+    t_node_t *n=&current_node_arr[level][id];
+	
+    int i;
+    int child_id[4];
+
+    render_element_t pos[9];
+    render_element_t middle;
+	
+    rendered_objs ++;
+	
+    //	printf( "Rendering node %d/%d with pass_id %d \n", level, id, n->pass_id );
+
+
+    assert( level < current_tile->lod );
+    GLfloat normal_color[3];
+	
+    if(n->render_strength > 0 )
+    {
+	get_heightmap_elements( id, level, n->render_strength, pos, &middle );
+#ifdef DRAW					\
+	glBegin( GL_TRIANGLE_FAN );
+	if( ALT_COLOUR  )
+	    glColor3fv( get_colour( level, n->render_strength ) );
+	else
+	{
+	    calc_el_color(&middle, &s->camera, normal_color);
+	    glColor3fv( normal_color );
+		    
+//		    glColor3ubv( middle.colour.vec );
+	}
+		
+	vertex_perspective( middle.vertex, s->camera.pos );
+		
+	if( pos[0].use )
+	{
+	    if( !ALT_COLOUR )
+	    {
+		calc_el_color(&pos[0], &s->camera, normal_color);
+		glColor3fv( normal_color );
+	    }
+	    vertex_perspective( pos[0].vertex, s->camera.pos );
+	}
+	for( i=0; i<4; i++ )
+	{
+	    if( !ALT_COLOUR )
+	    {
+		calc_el_color(&pos[2*1+1], &s->camera, normal_color);
+		glColor3fv( normal_color );
+	    }
+	    vertex_perspective( pos[2*i+1].vertex, s->camera.pos );
+	    if( pos[2*i+2].use )
+	    {
+		if( !ALT_COLOUR )
+		{
+		    calc_el_color(&pos[2*i+2], &s->camera, normal_color);
+		    glColor3fv( normal_color );
+		}
+		vertex_perspective( pos[2*i+2].vertex, s->camera.pos );
+	    }
+	}
+	glEnd();
+#endif						
+    }
+	else
+	{
+	    get_children( id, level, child_id );	
+	    for( i=0; i<4; i++ )
+	    {
+		render_node( child_id[i], level+1, s );
+	    }
+	}	
+    }  
+
+    void render_terrain( scene_t *s )
+    {
+	int i,j,k;
+	int arr_pos=0;
+	static tile_t *tile_arr[512];
+	int cam_tile_x, cam_tile_y;
+
+//	printf( "render_terrain() starting\n" );
+	current_scene = s;
+
+	cam_tile_x = s->camera.pos[0]/s->tile_width;
+	cam_tile_y = s->camera.pos[1]/s->tile_width;
+
+#ifdef DRAW					\
+	glShadeModel(GL_SMOOTH);
+	glEnable( GL_CULL_FACE );	
+#endif
+									\
+	for( i=cam_tile_x - RENDER_DIST; i < cam_tile_x+RENDER_DIST+1; i++ )
+	{
+	    for( j=cam_tile_y - RENDER_DIST; j < cam_tile_y+RENDER_DIST+1; j++ )
+	    {
+		tile_t *next_tile = get_tile( s, i, j );
+		if(( next_tile != 0 ) &&( next_tile->state == TILE_READY ))
+		{
+		    tile_arr[arr_pos++] = next_tile;
+		}
+	    }
+	}
+
+	for( i=0; i<arr_pos; i++ )
+	{
+	    current_tile=tile_arr[i];
+	    for( j=0; j<3; j++ )
+	    {
+		for( k=0; k<3; k++ )
+		{
+		    current_tile_arr[j][k]=get_tile( s, 
+						     current_tile->x+j-1, 
+						     current_tile->y+k-1 );
+		}
+	    }
+		
+	    offset_x = current_tile->x*(s->tile_width);
+	    offset_y = current_tile->y*(s->tile_width);
+		
+	    heightmap=current_tile->heightmap;
+	    current_node_arr=current_tile->node_arr;
+	    heightmap_width = (1<<(current_tile->lod))+1;		
+	    coord_scale = (float)s->tile_width/heightmap_width;
+		
+	    traverse_node( 0, 0, 0.0f );
+	}
+	
+	for( i=0; i<arr_pos; i++ )
+	{
+	    interpolation_pos = 0;
+	    current_tile=tile_arr[i];
+	    for( j=0; j<3; j++ )
+	    {
+		for( k=0; k<3; k++ )
+		{
+		    if( ( abs(current_tile->x+j-1-cam_tile_x) <= (RENDER_DIST) )&&
+			( abs(current_tile->y+k-1-cam_tile_y) <= (RENDER_DIST) ) )
+		    {
+			current_tile_arr[j][k]=get_tile( s, 
+							 current_tile->x+j-1, 
+							 current_tile->y+k-1 );
+		    }
+		    else
+		    {
+			current_tile_arr[j][k]=0;
+//					exit(0);
+		    }
+				
+		}
+	    }
+	    offset_x = current_tile->x*(s->tile_width);
+	    offset_y = current_tile->y*(s->tile_width);
+			
+	    heightmap=current_tile->heightmap;
+	    current_node_arr=current_tile->node_arr;
+	    current_tile->lod = current_tile->lod;
+	    heightmap_width = (1<<(current_tile->lod))+1;		
+	    coord_scale = (float)s->tile_width/(heightmap_width-1);
+
+	    cache_swipe();
+	    cache_node( 0, 0 );
+	    render_node( 0, 0, s );
+	}
+
+
+//	printf( "render_terrain() done\n" );	
+	
+#ifdef DRAW					\
+	glDisable( GL_CULL_FACE );
+#endif
+						\
+    }

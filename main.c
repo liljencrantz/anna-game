@@ -14,7 +14,6 @@
 #include "render.h"
 #include "screen.h"
 #include "actor.h"
-#include "camera.h"
 #include "tree.h"
 #include "anna_lua.h"
  

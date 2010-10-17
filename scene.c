@@ -3,6 +3,7 @@
 #include <strings.h>
 #include <math.h>
 #include <assert.h>
+#include <string.h>
 
 #include <GL/gl.h>	
 
@@ -24,115 +25,8 @@ void scene_init( scene_t *s, int lb, float scene_size )
     s->sun_light = 1.0;
 
     s->scene_size = scene_size;
-    s->render_quality=75.0;
+    s->render_quality=60.0;
 }
-/*
-
-float get_height( scene_t *s, float xf, float yf )
-{
-	int tile_x, tile_y, idx_x, idx_y, heightmap_side;
-	double sub_x, sub_y, factor_x1, factor_x2, factor_y1, factor_y2;
-	float res;
-		
-	tile_t *tile;
-
-	tile_x = (int)xf/s->tile_width;
-	tile_y = (int)yf/s->tile_width;
-
-	tile = get_tile( s, tile_x, tile_y );
-	if( (tile == 0) || (tile->state <= TILE_ACTIVE ) )
-	{
-		return 0.0f;
-	}	
-
-	heightmap_side = (1<<tile->lod)+1;
-
-	sub_x = (xf - s->tile_width*tile_x)*heightmap_side/s->tile_width;
-	sub_y = (yf - s->tile_width*tile_y)*heightmap_side/s->tile_width;
-	
-	factor_x2 = sub_x - floor(sub_x);
-	factor_x1 = 1.0f-factor_x2;
-	factor_y2 = sub_y - floor(sub_y);
-	factor_y1 = 1.0f-factor_y2;
-	
-	idx_x = floor(sub_x);
-	idx_y = floor(sub_y);
-
-	res =  tile->heightmap[tile->lod-1][idx_x   + idx_y     * heightmap_side ].height *factor_x1*factor_y1;
-	res += tile->heightmap[tile->lod-1][idx_x+1 + idx_y     * heightmap_side ].height *factor_x2*factor_y1;
-	res += tile->heightmap[tile->lod-1][idx_x   + (idx_y+1) * heightmap_side ].height *factor_x1*factor_y2;
-	res += tile->heightmap[tile->lod-1][idx_x+1 + (idx_y+1) * heightmap_side ].height *factor_x2*factor_y2;
-	
-	return res;
-}
-
-void get_nabla_height( scene_t *s, float xf, float yf, float *arr )
-{
-    int tile_x, tile_y, idx_x, idx_y, heightmap_side;
-    double sub_x, sub_y;
-    
-    
-    tile_t *tile;
-    
-    
-    tile_x = (int)xf/s->tile_width;
-    tile_y = (int)yf/s->tile_width;
-    
-    tile = get_tile( s, tile_x, tile_y );
-    if( (tile == 0) || (tile->state <= TILE_ACTIVE ) )
-    {
-	arr[0]=arr[1]=0;
-	return;
-    }
-    
-    heightmap_side = (1<<tile->lod)+1;
-    
-    sub_x = (xf - s->tile_width*tile_x)*heightmap_side/s->tile_width;
-    sub_y = (yf - s->tile_width*tile_y)*heightmap_side/s->tile_width;
-    
-    idx_x = floor(sub_x);
-    idx_y = floor(sub_y);
-    
-    arr[0] = tile->heightmap[tile->lod-1][idx_x+1   + idx_y     * heightmap_side ].height - 
-	tile->heightmap[tile->lod-1][idx_x   + idx_y     * heightmap_side ].height;
-    
-    arr[1] = tile->heightmap[tile->lod-1][idx_x   + (idx_y+1)     * heightmap_side ].height - 
-	tile->heightmap[tile->lod-1][idx_x   + idx_y     * heightmap_side ].height;
-}
-*/
-/*
-tile_t *get_tile( scene_t *s, int x, int y )
-{
-    if(s->tile_cash_x == x && s->tile_cash_y == y)
-    {
-	return s->tile_cash;
-    }
-    else
-    {
-	tile_t *t = (tile_t *)hash_get(
-	    &s->tile_hash, 
-	    (void *)hash_key(x, y ) );
-	s->tile_cash_x=x;
-	s->tile_cash_y=y;
-	s->tile_cash=t;
-	return t;
-    }
-}
-*/
- /*
-float get_corner_height( scene_t *s, int x, int y )
-{
-//	printf( "%d %d\n", x, y );	
-	float *foo = hash_get( &s->height_hash, (void *)hash_key(x, y ) );
-	if( foo == 0 )
-	{		
-		foo=&s->height_arr[s->height_arr_pos++];
-		*foo = generate_corner_height( s, x, y );
-		hash_put( &s->height_hash, (void *)hash_key(x, y ), foo );
-	}
-	return *foo;
-}
- */
 
 float scene_hid_x_coord(scene_t *s, hid_t hid)
 {
@@ -150,8 +44,7 @@ float scene_hid_y_coord(scene_t *s, hid_t hid)
 
 float scene_get_height( scene_t *s, float xf, float yf )
 {
-    return scene_get_height_level(s, s->level_base-1, xf, yf);
-    
+    return scene_get_height_level(s, s->level_base-1, xf, yf);    
 }
 
 float scene_get_height_level( scene_t *s, int level, float xf, float yf )
@@ -229,53 +122,42 @@ float scene_nid_min_distance(scene_t *s, nid_t nid, view_t *pos)
     npos[0]-= pos->pos[0];
     npos[1]-= pos->pos[1];
     
-    return sqrt(npos[0]*npos[0]+npos[1]*npos[1]);
+    return maxf(0.0, sqrt(npos[0]*npos[0]+npos[1]*npos[1]) - scene_nid_radius(s, nid));
+}
+
+float scene_nid_radius(scene_t *s, nid_t nid)
+{
+    int level = NID_GET_LEVEL(nid);
+    int points_at_level = 1 << level;
+    float side = s->scene_size / points_at_level;
+    return side * 0.7082;
+    
 }
 
 
-int scene_nid_is_visible(scene_t *s, nid_t nid, float distance, view_t *pos)
+int scene_nid_is_visible(scene_t *s, nid_t nid, view_t *pos)
 {
-    int i, j;
-    hid_t hid[10];
-    int visible;
-//    return 1;
-
-    if(NID_GET_LEVEL(nid) < 5)
-	return 1;
-    
-    nid_get_hid(nid, hid);
-//    printf("Check if node %d %d %d is visible.\n", NID_GET_LEVEL(nid), NID_GET_X_POS(nid), NID_GET_Y_POS(nid));
-    for( i=0; i<3; i++ ){
-	float k = s->camera.k[i];
-	float m = s->camera.m[i];
-	int side = s->camera.side[i];
-	visible=0;
-	for( j=1; j<8; j+= 2 )
-	{
-	    float node_x = scene_hid_x_coord(s, hid[j]);
-	    float node_y = scene_hid_y_coord(s, hid[j]);
-	    float proj_y = node_x*k + m;		 
-	    if( side )
-		visible |=  proj_y <= node_y ;
-	    else
-		visible |=  proj_y >= node_y ;
-	}
-	if( !visible )
-	{
-//	    printf("No, plane %d\n", i);
-	    return 0;
-	}
-    }
-//    printf("Yes\n");
-
-    return 1;
+    float p[2];
+    scene_nid_coord(s, nid, p);
+    return scene_is_visible(s, p, scene_nid_radius(s,nid));
 }
 
 int scene_is_visible(scene_t *s, float *pos, float radius)
 {
-    int i, j;
+    int i;
     int visible;
-//    return 1;
+
+    float diff[] = 
+	{
+	    s->camera.pos[0]-pos[0],
+	    s->camera.pos[1]-pos[1]
+	}
+    ;
+    float dst_sq = diff[0]*diff[0] + diff[1]*diff[1];
+    if(dst_sq > ((60+radius)*(60+radius)))
+	return 0;
+    
+
 
 //    printf("Check if node %d %d %d is visible.\n", NID_GET_LEVEL(nid), NID_GET_X_POS(nid), NID_GET_Y_POS(nid));
     for( i=0; i<3; i++ ){
@@ -283,19 +165,17 @@ int scene_is_visible(scene_t *s, float *pos, float radius)
 	float m = s->camera.m[i];
 	int side = s->camera.side[i];
 	visible=0;
-	float proj_y = pos[0]*k + m;		 
-	    if( side )
-		visible |=  proj_y <= pos[1];
-	    else
-		visible |=  proj_y >= pos[1];
+	float proj_y = pos[0]*k + m + radius*(1+fabs(k))*(side?-1.0:1.0);
+	if( side )
+	    visible |=  proj_y <= pos[1];
+	else
+	    visible |=  proj_y >= pos[1];
 	
 	if( !visible )
 	{
-//	    printf("No, plane %d\n", i);
 	    return 0;
 	}
     }
-//    printf("Yes\n");
 
     return 1;
     

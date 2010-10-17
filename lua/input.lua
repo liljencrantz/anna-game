@@ -18,9 +18,17 @@ function handle(scene)
    if f('q') then
       scene.active=false
    end
+   if f(48) then
+      scene.renderQuality = scene.renderQuality + 0.3
+   end
+
+   if f(57) then
+      scene.renderQuality = scene.renderQuality - 0.3
+   end
 
    p.actions.walk_forward = f(ARROW_UP)
    p.actions.walk_backward = f(ARROW_DOWN)
+
    p.actions.turn_left = f(ARROW_LEFT)
    p.actions.turn_right = f(ARROW_RIGHT)
    

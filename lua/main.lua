@@ -3,6 +3,7 @@ module("anna", package.seeall)
 require("lua/wrapper")
 require("lua/scene")
 require("lua/actor")
+--require("strict")
 
 --[[
     if(screen_key_get('q'))
@@ -52,23 +53,31 @@ require("lua/input")
 
 function run()
    local sc = scene.Scene.create(8, 200)
-   for i, j in pairs(scene) do
---      print(i)
---      print(j)
-   end
-   sc.player = actor.Actor.create("Bosse");
+   
+   sc.player = actor.Actor.create(sc, "Bosse");
    sc.camera = {100, 100, 10}
-
+   
+--   BallPeer.create(sc.__peer, "ball1", 42, 42, 2, 0, 1);
+   
    for i = 1, 100, 10 do
       for j = 1, 100, 10 do
-	 TreePeer.create(sc.__peer, "tree1", i, j, 0, 1);
+	 TreePeer.create(sc.__peer, "tree1", i, j, (i+j)%360, 1);
       end
    end
    
    local lastTime = sc:getRealTime()
+   local framerate = 30
+   i=1
    while sc.active do
+
       local now = sc:getRealTime()
-      local dt = 0.01--now-lastTime
+      local dt = now-lastTime
+
+      framerate = 0.98 * framerate + 0.02/dt
+      
+      if i % 300 == 0 then
+	 print("Framerate is " .. framerate)
+      end
       input.handle(sc)
       Screen.checkInput();
       sc:step(dt)
@@ -76,6 +85,7 @@ function run()
       Screen.swapBuffers()
 
       lastTime = now
+      i = i+1
    end
    Screen.destroy()
 end

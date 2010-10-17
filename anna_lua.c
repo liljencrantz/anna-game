@@ -8,8 +8,11 @@
 #include "scene.h"
 #include "actor.h"
 #include "tree.h"
+#include "ball.h"
 #include "anna_lua.h"
 #include "screen.h"
+#include "render.h"
+#include "tile.h"
 #include "liblua/src/lua.h"
 #include "liblua/src/lauxlib.h"
 #include "liblua/src/lualib.h"
@@ -17,6 +20,57 @@
 
 static lua_State *L;    
 
+void tile_calc(scene_t *s, int level_count);
+
+
+static void load_temp_tile_data(scene_t *s)
+{
+    tile_t *t = calloc(1, sizeof(tile_t));
+    s->root_tile=t;
+    int i, j;
+    
+    for(i=0; i<TILE_SUBTILE_COUNT; i++)
+    {
+	t->subtile[i] = calloc(1, sizeof(tile_t));
+    }
+    for(i=0; i<(2<<7); i++)
+    {
+	for(j=0; j<(2<<7); j++)
+	{
+	    hid_t hid;
+	    HID_SET(hid, 7, i, j);
+	    //printf("%d %d\n", i,j);
+	    assert(i == HID_GET_X_POS(hid));
+	    assert(j == HID_GET_Y_POS(hid));
+	    
+	    tile_hid_lookup(t,hid)->height = 1.5*sin(0.3*i)+1.5*sin(0.3*j);
+	    tile_hid_lookup(t,hid)->color[0] = 42;
+	    tile_hid_lookup(t,hid)->color[1] = 84;
+	    tile_hid_lookup(t,hid)->color[2] = 42;
+	    
+	    //printf("%d\n", hid.id, fabs(tile_hid_lookup(t,hid)->height - (0.0*sin(0.1*i)+0*sin(0.2*j)+0.1*i)));
+	    
+//	    assert(fabs(tile_hid_lookup(t,hid)->height - (0.0*sin(0.1*i)+0*sin(0.2*j)+0.1*i)) < 0.001);
+	}
+	
+    }
+    for(i=0; i<(2<<7); i++)
+    {
+	for(j=0; j<(2<<7); j++)
+	{
+	    hid_t hid;
+	    HID_SET(hid, 7, i, j);
+//	    printf("%d %d %f %f\n", i, j, tile_hid_lookup(t,hid)->height, (0.0*sin(0.1*i)+0*sin(0.2*j)+0.1*i));
+
+//	    assert(fabs(tile_hid_lookup(t,hid)->height - (0.0*sin(0.1*i)+0*sin(0.2*j)+0.1*i)) < 0.001);
+	}
+	
+    }
+    tile_calc(s, 8);
+}
+
+
+/*
 static int get_int (lua_State *L, void *v)
 {
     lua_pushnumber(L, *(int*)v);
@@ -28,7 +82,7 @@ static int set_int (lua_State *L, void *v)
     *(int*)v = luaL_checkint(L, 3);
     return 0;
 }
-
+*/
 static int get_float (lua_State *L, void *v)
 {
     lua_pushnumber(L, *(float*)v);
@@ -210,6 +264,58 @@ static int lua_tree_destroy(lua_State *L)
     if(t)
     {
 	scene_tree_destroy(s, *t);
+    }
+    return 0;
+}
+
+static int lua_ball_create (lua_State *L)
+{
+    int *res = (int *)lua_newuserdata(L, sizeof(int));
+    luaL_getmetatable(L, "BallPeer");
+    lua_setmetatable(L, -2);    
+    float pos[] = 
+	{
+	    0,0,0
+	}
+    ;
+    
+    *res = scene_ball_create(
+	(scene_t *)lua_topointer(L, 1),
+	(char *)luaL_checkstring(L, 2),
+	luaL_checknumber(L, 3));
+        
+    return 1;
+}
+
+static int lua_ball_set_location(lua_State *L)
+{
+    int *t = (int *)check_item(L, 1, "BallPeer");
+    scene_t *s = (scene_t *)lua_topointer(L, 2);
+    float x = luaL_checknumber(L, 3);
+    float y = luaL_checknumber(L, 4);
+    float z = luaL_checknumber(L, 5);
+    float a1 = luaL_checknumber(L, 6);
+    float a2 = luaL_checknumber(L, 7);
+    ball_t *b = scene_ball_get(s, *t);
+
+    b->pos[0]=x;
+    b->pos[1]=y;
+    b->pos[2]=z;
+
+    b->angle1=a1;
+    b->angle2=a2;
+
+    return 0;
+}
+
+
+static int lua_ball_destroy(lua_State *L)
+{
+    scene_t *s = (scene_t *)lua_topointer(L, 2);
+    int *t = (int *)check_item(L, 1, "BallPeer");
+    if(t)
+    {
+	scene_ball_destroy(s, *t);
     }
     return 0;
 }
@@ -413,6 +519,33 @@ void register_types(
 	tree_getters,
 	tree_setters);
 
+
+    static const register_member_t ball_getters[] = {
+	{0,0}
+    };
+
+    static const register_member_t ball_setters[] = {
+	{0,0}
+    };
+    
+    static const luaL_reg ball_methods[] = {
+	{"create", lua_ball_create},	
+	{"destroy", lua_ball_destroy},	
+	{"setLocation", lua_ball_set_location},	
+	{0,0}
+    };
+
+    static const luaL_reg ball_meta_methods[] = {
+	{0,0}
+    };
+    
+    register_type(
+	L,
+	"BallPeer", 
+	ball_methods, 
+	ball_meta_methods,
+	ball_getters,
+	ball_setters);
 
     static const register_member_t screen_getters[] = {
 	{0,0}

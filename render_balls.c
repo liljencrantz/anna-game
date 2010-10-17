@@ -1,0 +1,283 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <GL/gl.h>	
+#include <math.h>	
+
+#include "scene.h"
+#include "render.h"
+#include "util.h"
+#include "ball.h"
+
+
+#define BALL_COUNT(levels) (0x55555555 & ((1<<(2*(levels+1)))-1))
+#define SCALE_THRESHOLD 1.2
+
+float ball_normal[BALL_COUNT(BALL_LEVEL_MAX)][3];
+
+void plain_vertex(
+    int level, int x, int y, 
+    ball_type_t *b,
+    float *view_dir)
+{
+    int idx = ball_idx(level, x, y);
+    ball_point_t *p=&b->data[idx];
+    
+    glColor4f(fabs(dot_prod(view_dir, ball_normal[idx], 3)),0,0,1);
+    
+    glVertex3f(
+	ball_normal[idx][0]*p->radius,
+	ball_normal[idx][1]*p->radius,
+	ball_normal[idx][2]*p->radius
+	);    
+}
+
+static inline void scale_vertex_sub(
+    float f1, float f2, 
+    int idx1, int idx2, int idx3,
+    ball_type_t *b,
+    float *view_dir)
+{
+    float ff2 = 0.5*f2;
+
+    float *n1 = ball_normal[idx1];
+    float *n2 = ball_normal[idx2];
+    float *n3 = ball_normal[idx3];
+
+    float r1 = b->data[idx1].radius;
+    float r2 = b->data[idx2].radius;
+    float r3 = b->data[idx3].radius;
+    
+    float c1 = fabs(dot_prod(view_dir, ball_normal[idx1], 3));
+    float c2 = fabs(dot_prod(view_dir, ball_normal[idx2], 3));
+    float c3 = fabs(dot_prod(view_dir, ball_normal[idx3], 3));
+
+    glColor4f(f1*c1 + ff2*(c2+c3),0,0,1);
+    
+    glVertex3f(
+	n1[0]*f1*r1 + ff2*(n2[0]*r2+n3[0]*r3),
+	n1[1]*f1*r1 + ff2*(n2[1]*r2+n3[1]*r3),
+	n1[2]*f1*r1 + ff2*(n2[2]*r2+n3[2]*r3)
+	);    
+}
+
+
+void scale_vertex1(
+    float f1, float f2, 
+    int level, int x, int y, 
+    ball_type_t *b,
+    float *view_dir)
+{
+    int idx1 = ball_idx(level, x, y);
+    int idx2 = ball_idx(level-1, x/2, y/2);
+
+
+    float *n1 = ball_normal[idx1];
+    float *n2 = ball_normal[idx2];
+
+    float r1 = b->data[idx1].radius;
+    float r2 = b->data[idx2].radius;
+    
+    float c1 = fabs(dot_prod(view_dir, ball_normal[idx1], 3));
+    float c2 = fabs(dot_prod(view_dir, ball_normal[idx2], 3));
+
+    glColor4f(f1*c1 + f2*(c2),0,0,1);
+
+    glVertex3f(
+	n1[0]*f1*r1 + n2[0]*f2*(r2),
+	n1[1]*f1*r1 + n2[1]*f2*(r2),
+	n1[2]*f1*r1 + n2[2]*f2*(r2)
+	);
+}
+
+void scale_vertex2(
+    float f1, float f2, 
+    int level, int x, int y, 
+    ball_type_t *b,
+    float *view_dir)
+{
+    int idx1 = ball_idx(level, x, y);
+    int idx2 = ball_idx(level-1, x/2, y/2);
+    int idx3 = ball_idx(level-1, x/2, y/2+1);
+
+    scale_vertex_sub(f1,f2,idx1,idx2,idx3,b,view_dir);
+}
+
+void scale_vertex3(
+    float f1, float f2, 
+    int level, int x, int y, 
+    ball_type_t *b,
+    float *view_dir)
+{
+    
+    int idx1 = ball_idx(level, x, y);
+    int idx2 = ball_idx(level-1, x/2+1, y/2);
+    int idx3 = ball_idx(level-1, x/2, y/2+1);
+
+    scale_vertex_sub(f1,f2,idx1,idx2,idx3,b,view_dir);
+}
+
+void scale_vertex4(
+    float f1, float f2, 
+    int level, int x, int y, 
+    ball_type_t *b,
+    float *view_dir)
+{
+    int idx1 = ball_idx(level, x, y);
+    int idx2 = ball_idx(level-1, x/2, y/2);
+    int idx3 = ball_idx(level-1, x/2+1, y/2);
+
+    scale_vertex_sub(f1,f2,idx1,idx2,idx3,b,view_dir);    
+}
+
+
+void render_ball(scene_t *s, ball_t *t)
+{
+    int level;
+
+    int i, j;
+    
+    glPushMatrix();
+    
+    GLfloat view_dir[3];
+    subtract(t->pos, s->camera.pos, view_dir, 3);
+
+    
+    GLfloat corr = render_height_correct(
+	view_dir[0],
+	view_dir[1]);
+    float distance_sq = dot_prod(view_dir, view_dir, 3);    
+    float prev_error=2.0;
+    float error;
+    
+    for(level=2; level < t->type->levels; level++)
+    {
+	error = s->render_quality * t->type->error[level] / (0.0001 + sqrtf(distance_sq));
+//	printf("%.2f\n", error);
+	
+	if(error < 1.0)
+	{
+	    break;
+	}
+	prev_error = error;
+    }
+    
+    normalize(view_dir, view_dir, 3);
+    rotate_z(view_dir, -t->angle1*M_PI/180);
+    
+    glTranslatef( t->pos[0], t->pos[1], t->pos[2]+corr);
+    glRotatef( t->angle1, 0.0f, 0.0f, 1.0f );
+    glScalef(t->scale, t->scale, t->scale);
+    glPointSize(5.0);
+    
+    glColor4f(1,0,0,1);
+    glBegin(GL_TRIANGLE_STRIP);
+    
+    int side_size = 1<<level;
+//    printf("%.2f %.2f %d\n", prev_error, error, level);
+
+    if(prev_error < SCALE_THRESHOLD)
+    {
+	float f1 = (prev_error - 1.0)/(SCALE_THRESHOLD-1.0);
+	
+//	float f2 = (error)/(SCALE_THRESHOLD);
+	float f2 = (1.0 - f1);
+//	printf("%.2f %.2f\n", f1, f2);
+	
+	for(j=1;j<side_size;j++)
+	{
+
+	    for(i=0;i<side_size;i+=2)
+	    {		
+		scale_vertex1(
+		    f1, f2, level, i, j-1, t->type, view_dir);
+		scale_vertex2(
+		    f1, f2, level, i, j, t->type, view_dir);
+		scale_vertex4(
+		    f1, f2, level, i+1, j-1, t->type, view_dir);
+		scale_vertex3(
+		    f1, f2, level, i+1, j, t->type, view_dir);
+	    }	
+
+	    j++;
+	    for(i=0;i<side_size;i+=2)
+	    {
+		scale_vertex2(
+		    f1, f2, level, i, j-1, t->type, view_dir);
+		scale_vertex1(
+		    f1, f2, level, i, j, t->type, view_dir);
+		scale_vertex3(
+		    f1, f2, level, i+1, j-1, t->type, view_dir);
+		scale_vertex4(
+		    f1, f2, level, i+1, j, t->type, view_dir);
+	    }	
+
+	}	
+    }
+    else
+    {
+
+	for(j=1;j<side_size;j++)
+	{
+	    for(i=0;i<side_size;i++)
+	    {
+		plain_vertex(
+		    level, i, j-1,
+		    t->type, view_dir);
+		plain_vertex(
+		    level, i, j,
+		    t->type, view_dir);
+	    }	
+	}
+	plain_vertex(
+	    level, 0, side_size-1,
+	    t->type, view_dir);
+
+    }
+    
+    glEnd();    
+    
+    glPopMatrix();
+
+}
+
+void render_balls(scene_t *s)
+{
+
+    int i;
+    glEnable( GL_CULL_FACE );	
+    
+    for(i=0; i<scene_ball_get_count(s); i++)
+    {
+	ball_t *ball = scene_ball_get(s, i);
+	ball->visible = scene_is_visible(s,ball->pos, ball->scale);
+	if(ball->visible)
+	    render_ball(s, ball);
+    }
+    glDisable( GL_CULL_FACE );
+    
+}
+
+void render_balls_init()
+{
+    
+    int i, j, level;
+    for(level=0; level < BALL_LEVEL_MAX; level++)
+    {
+	int side_size = 1<<level;
+	for(i=0;i<side_size;i++)
+	{
+	    for(j=0;j<side_size;j++)
+	    {
+		ball_normal[ball_idx(level, i, j)][0] = sin(M_PI * j / (side_size-1)) * cos(M_PI * 2 * i / side_size);
+		ball_normal[ball_idx(level, i, j)][1] = sin(M_PI * j / (side_size-1)) * sin(M_PI * 2 * i / side_size);
+		ball_normal[ball_idx(level, i, j)][2] = cos(M_PI * j / (side_size-1));
+	    }	
+	}
+    }    
+    
+    render_register(render_balls, RENDER_PASS_SOLID);    
+    
+}
+
+

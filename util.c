@@ -57,9 +57,9 @@ void subtract( float *a,
 }
 
 void add( float *a,
-		  float *b,
-		  float *r,
-		  int len)
+	  float *b,
+	  float *r,
+	  int len)
 {
 	int i;	
 	for( i=0; i<len; i++ )

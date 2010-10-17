@@ -64,9 +64,9 @@ static void render_prepare_node(scene_t *s, nid_t nid)
 	return;
     }
     
-    n->distance = scene_nid_min_distance(s, nid, &s->camera);
-    if(scene_nid_is_visible(s, nid, n->distance, &s->camera))
+    if(scene_nid_is_visible(s, nid, &s->camera))
     {
+	n->distance = scene_nid_min_distance(s, nid, &s->camera);
 	error = node_get_error(n, &s->camera)*s->render_quality;
 	//printf("Distance: %.2f, distortion is %.2f, error is %.2f\n", n->distance, n->distortion, error);
 	
@@ -283,27 +283,27 @@ static void render_node(scene_t *s, nid_t nid)
 	glEnd();
 
 #define SHADE_MAX 0.6
-	if(n->distance < GRASS_MAX_DISTANCE + 2.0)
+	if(n->distance < GRASS_MAX_DISTANCE)
 	{
-
+	    
 	    if(render_element[1].shade < SHADE_MAX ||
 	       render_element[3].shade < SHADE_MAX ||
 	       render_element[5].shade < SHADE_MAX ||
 	       render_element[6].shade < SHADE_MAX)
 	    {
-			    
-	    glDisable( GL_CULL_FACE );
-	    glBegin( GL_TRIANGLES );
+		
+		glDisable( GL_CULL_FACE );
+		glBegin( GL_TRIANGLES );
 //	    printf("Woot %d %d %d\n", NID_GET_LEVEL(nid), NID_GET_X_POS(nid), NID_GET_Y_POS(nid));
 	    
-	    int i=0, j=0;
-	    GLfloat base_x, base_y, x, y;
-	    GLfloat offset = s->grass_offset;
-	    
-	    GLfloat max_x = render_element[5].vertex[0];
-	    GLfloat max_y = render_element[5].vertex[1];
-	    GLfloat min_x = render_element[1].vertex[0];
-	    GLfloat min_y = render_element[1].vertex[1];
+		int i=0, j=0;
+		GLfloat base_x, base_y, x, y;
+		GLfloat offset = s->grass_offset;
+		
+		GLfloat max_x = render_element[5].vertex[0];
+		GLfloat max_y = render_element[5].vertex[1];
+		GLfloat min_x = render_element[1].vertex[0];
+		GLfloat min_y = render_element[1].vertex[1];
 /*	    
 	    glVertex3f(min_x, min_y, 0);
 	    glVertex3f(max_x, max_y, 0);
@@ -313,144 +313,144 @@ static void render_node(scene_t *s, nid_t nid)
 	    assert(max_x > min_x);
 	    assert(max_y > min_y);
 */	    
-	    GLfloat x_w_component = cos(-s->camera.lr_rot * M_PI / 180.0);
-	    GLfloat y_w_component = sin(-s->camera.lr_rot * M_PI / 180.0);
-	    GLfloat wave[] = 
-		{
-		    0.0, 
-		    0.5*GRASS_INTERVAL * sin(M_PI*0.2),
-		    0.5*GRASS_INTERVAL * sin(M_PI*0.4),
-		    0.5*GRASS_INTERVAL * sin(M_PI*0.6),
-		    0.5*GRASS_INTERVAL * sin(M_PI*0.8),
-		    0.5*GRASS_INTERVAL * sin(M_PI*1.0),
-		    0.5*GRASS_INTERVAL * sin(M_PI*1.2),
-		    0.5*GRASS_INTERVAL * sin(M_PI*1.4),
-		    0.5*GRASS_INTERVAL * sin(M_PI*1.8),
-		}
-	    ;
-	    
-	    GLfloat max_dst_sq = GRASS_MAX_DISTANCE*GRASS_MAX_DISTANCE;
-	    
-	    while(1)
-	    {
-		base_x = min_x + GRASS_INTERVAL*i;
+		GLfloat x_w_component = cos(-s->camera.lr_rot * M_PI / 180.0);
+		GLfloat y_w_component = sin(-s->camera.lr_rot * M_PI / 180.0);
+		GLfloat wave[] = 
+		    {
+			0.0, 
+			0.5*GRASS_INTERVAL * sin(M_PI*0.2),
+			0.5*GRASS_INTERVAL * sin(M_PI*0.4),
+			0.5*GRASS_INTERVAL * sin(M_PI*0.6),
+			0.5*GRASS_INTERVAL * sin(M_PI*0.8),
+			0.5*GRASS_INTERVAL * sin(M_PI*1.0),
+			0.5*GRASS_INTERVAL * sin(M_PI*1.2),
+			0.5*GRASS_INTERVAL * sin(M_PI*1.4),
+			0.5*GRASS_INTERVAL * sin(M_PI*1.8),
+		    }
+		;
 		
-		if(base_x >= max_x)
-		    break;
-		j=0;
-		GLfloat f1 = (base_x-min_x)/(max_x-min_x);
+		GLfloat max_dst_sq = GRASS_MAX_DISTANCE*GRASS_MAX_DISTANCE;
 		
-		GLfloat inv_dist = 1.0/(max_y-min_y);
-		base_y = min_y + ((i%2)?0.5*GRASS_INTERVAL:0.0);
-
 		while(1)
 		{
-		    base_y += GRASS_INTERVAL*j++;
+		    base_x = min_x + GRASS_INTERVAL*i;
 		    
-		    if(base_y >= max_y)
+		    if(base_x >= max_x)
 			break;
+		    j=0;
+		    GLfloat f1 = (base_x-min_x)/(max_x-min_x);
 		    
-		    x = base_x+wave[j%8];
-		    y = base_y+wave[i%8];
+		    GLfloat inv_dist = 1.0/(max_y-min_y);
+		    base_y = min_y + ((i%2)?0.5*GRASS_INTERVAL:0.0);
 		    
-		    GLfloat dx = x-s->camera.pos[0];
-		    GLfloat dy = y-s->camera.pos[1] ;
-
-		    GLfloat dst_sq = dx*dx + dy*dy;
-		    if(dst_sq > max_dst_sq)
-			continue;
-
-		    GLfloat f2 = (base_y-min_y)*inv_dist;		    
-
-		    GLfloat ff1;
-		    GLfloat ff2;
-		    int el[4];
-		    
-		    if((f1 < 0.5) && (f2 < 0.5))
+		    while(1)
 		    {
-			ff1 = 2.0 * f1;
-			ff2 = 2.0 * f2;
-			el[0] = 1;
-			el[1] = 2;
-			el[2] = MIDDLE_ELEMENT;
-			el[3] = 0;
-		    }
-		    else if (f1 < 0.5)
-		    {
-			ff1 = 2.0*f1;
-			ff2 = 2.0*f2 - 1.0;
-			el[0] = 0;
-			el[1] = MIDDLE_ELEMENT;
-			el[2] = 6;
-			el[3] = 7;
-		    }
-		    else if (f2 < 0.5)
-		    {
-			ff1 = 2.0*f1 - 1.0;
-			ff2 = 2.0*f2 ;
-			el[0] = 2;
-			el[1] = 3;
-			el[2] = 4;
-			el[3] = MIDDLE_ELEMENT;
-		    }
-		    else
-		    {
-			ff1 = 2.0*f1 - 1.0;
-			ff2 = 2.0*f2 - 1.0;
-			el[0] = MIDDLE_ELEMENT;
-			el[1] = 4;
-			el[2] = 5;
-			el[3] = 6;
+			base_y += GRASS_INTERVAL*j++;
 			
-		    }
+			if(base_y >= max_y)
+			    break;
+			
+			x = base_x+wave[j%8];
+			y = base_y+wave[i%8];
+			
+			GLfloat dx = x-s->camera.pos[0];
+			GLfloat dy = y-s->camera.pos[1] ;
+			
+			GLfloat dst_sq = dx*dx + dy*dy;
+			if(dst_sq > max_dst_sq)
+			    continue;
+			
+			GLfloat f2 = (base_y-min_y)*inv_dist;		    
+			
+			GLfloat ff1;
+			GLfloat ff2;
+			int el[4];
+			
+			if((f1 < 0.5) && (f2 < 0.5))
+			{
+			    ff1 = 2.0 * f1;
+			    ff2 = 2.0 * f2;
+			    el[0] = 1;
+			    el[1] = 2;
+			    el[2] = MIDDLE_ELEMENT;
+			    el[3] = 0;
+			}
+			else if (f1 < 0.5)
+			{
+			    ff1 = 2.0*f1;
+			    ff2 = 2.0*f2 - 1.0;
+			    el[0] = 0;
+			    el[1] = MIDDLE_ELEMENT;
+			    el[2] = 6;
+			    el[3] = 7;
+			}
+			else if (f2 < 0.5)
+			{
+			    ff1 = 2.0*f1 - 1.0;
+			    ff2 = 2.0*f2 ;
+			    el[0] = 2;
+			    el[1] = 3;
+			    el[2] = 4;
+			    el[3] = MIDDLE_ELEMENT;
+			}
+			else
+			{
+			    ff1 = 2.0*f1 - 1.0;
+			    ff2 = 2.0*f2 - 1.0;
+			    el[0] = MIDDLE_ELEMENT;
+			    el[1] = 4;
+			    el[2] = 5;
+			    el[3] = 6;
+			
+			}
 
-		    GLfloat shade;
+			GLfloat shade;
 
-		    shade  = render_element[el[0]].shade * (1.0-ff1) * (1.0-ff2);
-		    shade += render_element[el[1]].shade * (ff1) * (1.0-ff2);
-		    shade += render_element[el[2]].shade * (ff1) * (ff2);
-		    shade += render_element[el[3]].shade * (1.0-ff1) * (ff2);
+			shade  = render_element[el[0]].shade * (1.0-ff1) * (1.0-ff2);
+			shade += render_element[el[1]].shade * (ff1) * (1.0-ff2);
+			shade += render_element[el[2]].shade * (ff1) * (ff2);
+			shade += render_element[el[3]].shade * (1.0-ff1) * (ff2);
 
-		    if (shade > SHADE_MAX)
-			continue;
+			if (shade > SHADE_MAX)
+			    continue;
 //		    printf("%.2f\n", shade);
 		    
-		    GLfloat h;
-
-		    h  = render_element[el[0]].vertex[2] * (1.0-ff1) * (1.0-ff2);
-		    h += render_element[el[1]].vertex[2] * (ff1) * (1.0-ff2);
-		    h += render_element[el[2]].vertex[2] * (ff1) * (ff2);
-		    h += render_element[el[3]].vertex[2] * (1.0-ff1) * (ff2);	
+			GLfloat h;
+			
+			h  = render_element[el[0]].vertex[2] * (1.0-ff1) * (1.0-ff2);
+			h += render_element[el[1]].vertex[2] * (ff1) * (1.0-ff2);
+			h += render_element[el[2]].vertex[2] * (ff1) * (ff2);
+			h += render_element[el[3]].vertex[2] * (1.0-ff1) * (ff2);	
 		    
-		    h += render_height_correct(dx, dy);
-
-		    GLfloat dz = GRASS_HEIGHT * minf(1.0, 8.0*(0.6-shade));
+			h += render_height_correct(dx, dy);
+			
+			GLfloat dz = GRASS_HEIGHT * minf(1.0, 8.0*(0.6-shade));
 		    
-		    //printf("%.2f\n",render_element[MIDDLE_ELEMENT].shade);;
+			//printf("%.2f\n",render_element[MIDDLE_ELEMENT].shade);;
 //		    glColor3f( 0,0,0);
-
-		    glColor3ub( 
-			render_element[MIDDLE_ELEMENT].color[0]*shade, 
-			render_element[MIDDLE_ELEMENT].color[1]*shade, 
-			render_element[MIDDLE_ELEMENT].color[2]*shade);//0.1*nid.level );
+			
+			glColor3ub( 
+			    render_element[MIDDLE_ELEMENT].color[0]*shade, 
+			    render_element[MIDDLE_ELEMENT].color[1]*shade, 
+			    render_element[MIDDLE_ELEMENT].color[2]*shade);//0.1*nid.level );
 /**/		    
-
-		    glVertex3f(
-			x-0.5*GRASS_WIDTH*x_w_component,
-			y-0.5*GRASS_WIDTH*y_w_component,
-			h-0.1);
-		    glVertex3f(
-			x+0.5*GRASS_WIDTH*x_w_component,
-			y+0.5*GRASS_WIDTH*y_w_component,
-			h-0.1);
-		    glVertex3f(x+offset,y,h+dz);
-		}
+			
+			glVertex3f(
+			    x-0.5*GRASS_WIDTH*x_w_component,
+			    y-0.5*GRASS_WIDTH*y_w_component,
+			    h-0.1);
+			glVertex3f(
+			    x+0.5*GRASS_WIDTH*x_w_component,
+			    y+0.5*GRASS_WIDTH*y_w_component,
+			    h-0.1);
+			glVertex3f(x+offset,y,h+dz);
+		    }
 		
-		i++;
-	    }
+		    i++;
+		}
 	    
-	    glEnd();
-	    glEnable( GL_CULL_FACE );	
+		glEnd();
+		glEnable( GL_CULL_FACE );	
 	    }
 	    
 	}

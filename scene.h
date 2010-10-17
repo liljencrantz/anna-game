@@ -1,6 +1,8 @@
 #ifndef SCENE_H
 #define SCENE_H
 
+#include <stdio.h>
+
 #include "tile.h"
 #include "view.h"
 #include "tree.h"
@@ -64,7 +66,10 @@ void scene_nid_coord(scene_t *s, nid_t nid, float *dst);
  */
 float scene_nid_min_distance(scene_t *s, nid_t nid, view_t *pos);
 
-int scene_nid_is_visible(scene_t *s, nid_t nid, float distance, view_t *pos);
+float scene_nid_radius(scene_t *s, nid_t nid);
+
+
+int scene_nid_is_visible(scene_t *s, nid_t nid, view_t *pos);
 
 int scene_is_visible(scene_t *s, float *pos, float radius);
 
@@ -104,7 +109,7 @@ static inline int scene_tree_create(
     t->pos[0] = pos[0];
     t->pos[1] = pos[1];
     t->pos[2] = scene_get_height(s, pos[0], pos[1]);
-    printf("Create tree at %f %f %f\n", pos[0], pos[1], t->pos[2]);
+    printf("Create tree at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
     t->type = tree_type_get(tree_type_name);
     t->angle = 0.0;
     t->radius = 3.0;
@@ -133,20 +138,19 @@ static inline size_t scene_ball_get_count(scene_t *s)
 static inline int scene_ball_create(
     scene_t *s,
     char *ball_type_name,
-    float *pos,
-    float angle,
     float scale)
 {
     ball_t *t = &s->ball[s->ball_count];
     
-    t->pos[0] = pos[0];
-    t->pos[1] = pos[1];
-    t->pos[2] = scene_get_height(s, pos[0], pos[1]);
-    printf("Create ball at %f %f %f\n", pos[0], pos[1], t->pos[2]);
+    t->pos[0] = 0;
+    t->pos[1] = 0;
+    t->pos[2] = 0;
+
+//    printf("Create ball at %f %f %f, scale is %.2f\n", pos[0], pos[1], t->pos[2], scale);
     t->type = ball_type_get(ball_type_name);
-    t->angle = 0.0;
-    t->radius = 3.0;
-    t->scale = 1.0;
+    t->angle1 = 0.0;
+    t->angle2 = 0.0;
+    t->scale = scale;
     return s->ball_count++;
 }
 

@@ -87,6 +87,7 @@ function Scene:step(dt)
       end
       self.cameraAngle = ca
    end
+   self.cameraAngle = self.player.angle
    
    pos = self.player.pos
    pos[1] = pos[1] - CAMERA_DISTANCE * math.cos(self.cameraAngle*math.pi/180)

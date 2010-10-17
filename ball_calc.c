@@ -10,19 +10,17 @@
 #include "util.h"
 #include "assert.h"
 
-#define TILE_CALC_NORM 15.0
+#define BALL_CALC_NORM 15.0
 
-static inline void interpolate( scene_t * s,
-				hid_t hid )
+static inline void interpolate( ball_type_t *b, int level, int x, int y )
 {
-    heightmap_element_t *hm = scene_hid_lookup(s, hid);
-    assert(hm);
-
-//	int col_arr[4];
+    memcpy(
+	&b->data[ball_idx(level, x, y)], 
+	&b->data[ball_idx(level+1, x*2, y*2)],
+	sizeof(ball_point_t));
+    return;
+    
 /*
-  colour_type col;
-  colour_type sub_col;
-*/	
     int i, j;
     int tot_factor = 0;
     GLfloat height=0.0f;
@@ -35,24 +33,22 @@ static inline void interpolate( scene_t * s,
 	    -1
 	}
     ;
-//	col_arr[0]=col_arr[1]=col_arr[2]=col_arr[3]=0;
 	
     int x_pos = HID_GET_X_POS(hid);
     int y_pos = HID_GET_Y_POS(hid);
     int color[3];
     
-    
     for( i=0; i<5; i++ )
     {
 	int x_new = 2*x_pos-2+i;
-	if(x_new < 0 || x_new >= TILE_SUBTILE_HM_PER_TILE(HID_GET_LEVEL(hid)+1))
+	if(x_new < 0 || x_new >= BALL_SUBBALL_HM_PER_BALL(HID_GET_LEVEL(hid)+1))
 	{
 	    continue;
 	}
 	for( j=0; j<5; j++ )
 	{
 	    int y_new = 2*y_pos-2+i;
-	    if(y_new < 0 || y_new >= TILE_SUBTILE_HM_PER_TILE(HID_GET_LEVEL(hid)+1))
+	    if(y_new < 0 || y_new >= BALL_SUBBALL_HM_PER_BALL(HID_GET_LEVEL(hid)+1))
 	    {
 		continue;
 	    }
@@ -83,6 +79,8 @@ static inline void interpolate( scene_t * s,
     hm->color[0] = color[0]/tot_factor;
     hm->color[1] = color[1]/tot_factor;
     hm->color[2] = color[2]/tot_factor;
+*/
+
 } 
 
 /**
@@ -90,27 +88,26 @@ static inline void interpolate( scene_t * s,
    interpolated height of that heightmap element based on the height
    of the underlying elements.
 */
-void tile_calc_lod(scene_t *s, int level_count)
+void ball_calc_lod(ball_type_t *b)
 {
     
     int i, j, k;
-    for( i=level_count-2; i>=0; i-- )
+    for( i=b->levels-1; i>=0; i-- )
     {
-	int nw = 2<<i;
+	int nw = 1<<i;
 	for( j=0; j<nw; j++ )
 	{
 	    for( k=0; k<nw; k++ )
 	    {		
-		hid_t hid;
-		HID_SET(hid, i, j, k);
-		interpolate( s, hid );
+		interpolate( b, i, j, k );
 	    }
 	}
     }
     
 }
 
-static void tile_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat err)
+/*
+static void ball_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat err)
 {
     int hid_x = HID_GET_X_POS(ohid);
     int hid_y = HID_GET_Y_POS(ohid);
@@ -139,13 +136,21 @@ static void tile_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat 
 	    nid_t nid;
 	    NID_SET(nid, level, nid_x+i, nid_y+j);
 	    t_node_t *n = scene_nid_lookup(s, nid);
-	    n->distortion += powf(err,TILE_CALC_NORM);
+	    n->distortion += powf(err,BALL_CALC_NORM);
 //	    n->distortion = maxf(err, n->distortion);
 	}
 	
     }
     
 }
+*/
+
+static float height_factor(int lvl, float f)
+{
+    float angle = 2*M_PI / (1<<lvl);
+    return cos(angle * f);
+}
+
 
 
 /**
@@ -153,70 +158,80 @@ static void tile_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat 
    coefficient to use when calculating the error obtained by using the
    specified node instead of the leaf node.
  */
-static void tile_calc_node_distortion(scene_t *s, int level_count)
+static void ball_calc_node_distortion(ball_type_t *b)
 {
+
     int i, j, lvl, k;
-    GLfloat avg[]={0,0,0,0,0,0,0,0};
-    int avg_count[]={0,0,0,0,0,0,0,0};
-    int count=0;
     
-    for(i=0; i< (1<<level_count); i++)
+    for(i=0; i<b->levels; i++)
     {
-	for(j=0; j< (1<<level_count); j++)
+	b->error[i] = 0;
+    }
+    int count[]={0,0,0,0,0,0,0,0,0};
+    
+
+    for(i=0; i< (1<<b->levels); i++)
+    {
+	for(j=0; j< (1<<b->levels); j++)
 	{
-	    hid_t ohid;
-	    HID_SET(ohid, level_count-1, i, j);
-	    GLfloat org_height = scene_hid_lookup(s, ohid)->height;
-	    GLfloat x_pos = scene_hid_x_coord(s, ohid);
-	    GLfloat y_pos = scene_hid_y_coord(s, ohid);
-	    
-	    for(lvl=level_count-1; lvl >=0; lvl--)
+	    GLfloat org_height = b->data[ball_idx(b->levels-1, i, j)].radius;
+	    for(lvl=b->levels-2; lvl >=0; lvl--)
 	    {
-		GLfloat approx_height = scene_get_height_level(s, lvl, x_pos, y_pos);
-		tile_calc_add_node_error(s, lvl, ohid, fabs(approx_height-org_height));
-//		printf("%d %d %d\n", lvl, i, j);
-		assert(!isnan(approx_height));
-		assert(!isnan(org_height));
+		int ldiff = b->levels - lvl-1;
 		
-		avg[lvl] += fabs(approx_height-org_height);
-		assert(!isnan(avg[lvl]));
-//		printf("%.2f\n", avg[lvl]);
-	    }
-	    count++;
-	}
-    }
-    for(i=0; i<8; i++)
-    {
-//	printf("Level %d, avg error %.2f\n", i, avg[i]/count);
-	avg[i]=0;
-    }
-    printf("\n");
-    
-    for( i=level_count-2; i>=0; i-- )
-    {
-	int nw = 1<<i;
-	for( j=0; j<nw; j++ )
-	{
-	    for( k=0; k<nw; k++ )
-	    {
-		nid_t nid;
-		NID_SET(nid, i, j, k);
-		t_node_t *n = scene_nid_lookup(s, nid);
-		//printf("%.2f => %.2f\n", n->distortion, powf(n->distortion,1.0/3.0));
-		n->distortion = powf(n->distortion,1.0/TILE_CALC_NORM);
-		avg[i] += n->distortion;
-		avg_count[i]++;
+		int x_trunc = (i) >> ldiff;
+		float f1x = ((float)(i - (x_trunc << ldiff)) / (1<<ldiff));
+		float f2x = 1.0-f1x;
+		
+		int y_trunc = (j) >> ldiff;
+		float f1y = ((float)(j - (y_trunc << ldiff)) / (1<<ldiff));
+		float f2y = 1.0-f1y;
+
+//		printf("%d %d %d %.2f\n", j, lvl, y_trunc, f1y);
+		
+		assert(f1x>=0);
+		assert(f2x>=0);
+		assert(f1y>=0);
+		assert(f2y>=0);
+		
+		GLfloat approx_height = 
+		    b->data[ball_idx(lvl, x_trunc, y_trunc)].radius*f1x*f1y;
+		approx_height += 
+		    b->data[ball_idx(lvl, x_trunc+1, y_trunc)].radius*f2x*f1y;
+		approx_height += 
+		    b->data[ball_idx(lvl, x_trunc, y_trunc+1)].radius*f1x*f2y;
+		approx_height += 
+		    b->data[ball_idx(lvl, x_trunc+1, y_trunc+1)].radius*f2x*f2y;
+		approx_height = 
+		    b->data[ball_idx(lvl, x_trunc, y_trunc)].radius;
+
+		approx_height *= height_factor(lvl, minf(f1x,f2x)+minf(f1y,f2y));
+/*
+
+		if(fabs(approx_height-org_height) > 2.01 && lvl>=4)
+		{
+		    printf(
+			"LALA %d %d=>%d, %d=>%d, %.2f %.2f\n", 
+			lvl, i, x_trunc, j, y_trunc, org_height, approx_height);
+		}
+*/		
+		b->error[lvl] += pow(fabs(approx_height-org_height),2);
+		count[lvl]++;
 	    }
 	}
     }
 
-    for(i=0; i<7; i++)
+    for(i=0; i<b->levels-1; i++)
     {
-//	printf("Level %d, avg node distortion %.2f\n", i, avg[i]/avg_count[i]);
+	b->error[i]/= count[i];
+	b->error[i]= sqrt(b->error[i]);
+
+	printf("Level %d, error %.2f\n", i, b->error[i]);
     }
+
 }
 
-static void tile_calc_normal_hid(scene_t *s, hid_t hid)
+static void ball_calc_normal_hid(scene_t *s, hid_t hid)
 {
     int lvl = HID_GET_LEVEL(hid);
     int x = HID_GET_X_POS(hid);
@@ -224,8 +239,8 @@ static void tile_calc_normal_hid(scene_t *s, hid_t hid)
     int x1, x2, y1, y2;
     x1 = x==0?0:x-1;
     y1 = y==0?0:y-1;
-    x2 = x==(TILE_SUBTILE_HM_PER_TILE(lvl)-1)?x:x+1;
-    y2 = y==(TILE_SUBTILE_HM_PER_TILE(lvl)-1)?y:y+1;
+    x2 = x==(BALL_SUBBALL_HM_PER_BALL(lvl)-1)?x:x+1;
+    y2 = y==(BALL_SUBBALL_HM_PER_BALL(lvl)-1)?y:y+1;
     hid_t xhid1, xhid2, yhid1, yhid2;
     HID_SET(xhid1, lvl, x1, y);
     HID_SET(xhid2, lvl, x2, y);
@@ -250,33 +265,8 @@ static void tile_calc_normal_hid(scene_t *s, hid_t hid)
     
 }
 
-static void tile_calc_normal(scene_t *s, int level_count)
+void ball_calc(ball_type_t *b)
 {
-    int i, j, k;
-    for( i=level_count-1; i>=0; i-- )
-    {
-	int nw = 2<<i;
-	for( j=0; j<nw; j++ )
-	{
-	    for( k=0; k<nw; k++ )
-	    {		
-		hid_t hid;
-		HID_SET(hid, i, j, k);
-		tile_calc_normal_hid( s, hid );
-	    }
-	}
-    }
-    
-}
-
-void tile_calc(scene_t *s, int level_count)
-{
-
-    tile_calc_lod(s, level_count);
-
-    nid_t nid;
-    NID_SET(nid, 0, 0, 0);
-    tile_calc_node_distortion(s, level_count);
-
-    tile_calc_normal(s, level_count);
+      ball_calc_lod(b);
+      ball_calc_node_distortion(b);
 }

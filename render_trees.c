@@ -146,8 +146,8 @@ void render_leaves(
     
 #define DISTANCE_HIGH_FULL 20.0
 #define DISTANCE_HIGH_SCALE 45.0
-#define DISTANCE_MID_FULL 200.0
-#define DISTANCE_MID_SCALE 300.0
+#define DISTANCE_MID_FULL 300.0
+#define DISTANCE_MID_SCALE 600.0
 
     if (distance_sq < DISTANCE_HIGH_SCALE)
     {
@@ -203,7 +203,7 @@ void render_leaves(
 	    glVertex3f(
 		base_pos[0]+sec->normal[0]*f2[j] + sec->normal[1]*f1[j], 
 		base_pos[1]+sec->normal[0]*f1[j] + sec->normal[1]*f2[j], 
-		base_pos[2]+zfactor*0.1
+		base_pos[2]+zfactor*0.4
 		);
     }
     
@@ -256,7 +256,7 @@ void render_leaves(
 		    glVertex3f(
 			base_pos[0]+sec->normal[0]*f2[j] + sec->normal[1]*f1[j], 
 			base_pos[1]+sec->normal[0]*f1[j] + sec->normal[1]*f2[j], 
-			base_pos[2]+zfactor*0.1
+			base_pos[2]+zfactor*0.4
 			);	    
 		}
 	    }
@@ -268,7 +268,7 @@ void render_leaves(
     if(low_count > mid_count)
     {
 	
-	glPointSize(2.0);
+	glPointSize(3.0);
 	glBegin( GL_POINTS );
 	for(; i<low_count; i++)
 	{	
@@ -302,7 +302,93 @@ void render_leaves(
 }
 
 
+
+
 void render_tree_leaves(scene_t *s, tree_t *t)
+{
+    float middle[]={988,843};
+    
+    float vec[][2]={
+	{682,1285},
+	{597,1183},
+	{514,1192},
+	{423,1140},
+	{406,1014},
+	{462,984},
+	{388,898},
+	{436,859},
+	{412,775},
+	{465,730},
+	{471,669},
+	{406,634},
+	{393,532},
+	{513,484},
+	{574,528},
+	{636,528},
+	{699,444},
+	{822,459},
+	{903,567},
+	{912,493},
+	{1039,480},
+	{1047,523},
+	{1158,537},
+	{1158,570},
+	{1219,570},
+	{1234,639},
+	{1260,636},
+	{1369,802},
+	{1329,847},
+	{1363,955},
+	{1327,1008},
+	{1365,1120},
+	{1269,1245},
+	{1327,1294},
+	{1212,1405},
+	{1206,1495},
+	{1066,1518},
+	{973,1464},
+	{898,1345},
+	{909,1203},
+	{790,1104}
+    };
+    
+
+    int vec_count = sizeof(vec)/sizeof(*vec);
+    float scale = 0.0042;
+    
+    
+    glPushMatrix();
+    GLfloat view_dir[3];
+    subtract(t->pos, s->camera.pos, view_dir, 3);
+    GLfloat corr = render_height_correct(view_dir[0],
+					 view_dir[1]);
+    
+//    view_dir[2]-= corr;
+    
+    glTranslatef( t->pos[0], t->pos[1]-0.6, t->pos[2]+corr+ 3.3);
+    glRotatef(t->angle, 0,0,1);
+    rotate_z(view_dir, -t->angle*M_PI/180);
+    glColor4f(0.2,0.4,0.1,1);
+    
+    glBegin( GL_TRIANGLE_FAN );
+    
+    int i;
+    glVertex3f(0.4,0,0);
+
+    for(i=0; i<vec_count; i++)
+    {
+	float x = 0.4;
+	float y = -(vec[i][0]-middle[0])*scale;
+	float z = (middle[1]-vec[i][1])*scale;
+	glVertex3f(x,y,z);
+    }    
+    glEnd();
+    
+    glPopMatrix();
+    
+}
+
+void render_tree_leavesaaa(scene_t *s, tree_t *t)
 {
     
     glPushMatrix();
@@ -315,7 +401,8 @@ void render_tree_leaves(scene_t *s, tree_t *t)
 //    view_dir[2]-= corr;
     
     glTranslatef( t->pos[0], t->pos[1], t->pos[2]+corr);
-    //glRotatef(t->angle, 0,0,1);
+    glRotatef(t->angle, 0,0,1);
+    rotate_z(view_dir, -t->angle*M_PI/180);
     
     GLfloat distance_sq = view_dir[0]*view_dir[0] + view_dir[1]*view_dir[1];
 //    w/distance > k * quality
@@ -373,7 +460,7 @@ void render_tree_trunk(scene_t *s, tree_t *t)
 //    view_dir[2]-= corr;
     
     glTranslatef( t->pos[0], t->pos[1], t->pos[2]+corr);
-    //glRotatef(t->angle, 0,0,1);
+    glRotatef(t->angle, 0,0,1);
 
 #define NORMALIZE_SECTION_DIST 200.0
 
@@ -383,6 +470,7 @@ void render_tree_trunk(scene_t *s, tree_t *t)
     {
 	view_dir[2] += 2.5;	
 	normalize(view_dir, view_dir, 3);
+	rotate_z(view_dir, -t->angle*M_PI/180);
     }
     
 //    w/distance > k * quality
@@ -408,12 +496,13 @@ void render_tree_trunk(scene_t *s, tree_t *t)
 		case TREE_SECTION_REGULAR:
 		    add(view_dir, t->type->section[i].pos2, view_dir2, 3);
 		    normalize(view_dir2, view_dir2, 3);
+		    rotate_z(view_dir, -t->angle*M_PI/180);
 		    render_section(&t->type->section[i], view_dir2);
 		    break;
 		case TREE_SECTION_JOINT:
 		    add(view_dir, t->type->section[i].pos1, view_dir2, 3);
 		    normalize(view_dir2, view_dir2, 3);
-		    
+		    rotate_z(view_dir, -t->angle*M_PI/180);
 		    render_joint(&t->type->section[i], view_dir2, 0);
 		    break;
 		    
@@ -467,11 +556,13 @@ int rndc()
     return 0;//rand()%16 + 8;
 }
 
+
+
 void render_trees_leaves(scene_t *s)
 {
 
-//    glShadeModel( GL_FLAT );
-
+    glShadeModel( GL_FLAT );
+    
     int i;
 
     s->leaf_offset = 0.8+0.2*sin(2.0 * s->time);
@@ -479,12 +570,15 @@ void render_trees_leaves(scene_t *s)
     for(i=0; i<scene_tree_get_count(s); i++)
     {
 	tree_t *tree = scene_tree_get(s, i);
+
 	tree->visible = scene_is_visible(s,tree->pos, 3);
 	if(tree->visible)
+	{
 	   render_tree_leaves(s, tree);
+	}
     }
 
-//    glShadeModel(GL_SMOOTH);
+    glShadeModel(GL_SMOOTH);
     
 }
 

@@ -34,6 +34,7 @@ void render_init()
     render_terrain_init();
     render_trees_init();    
     render_actors_init();    
+    render_balls_init();    
 }
 
 static GLfloat sign(GLfloat v)
@@ -49,8 +50,8 @@ void render_register(render_function_t f, int pass)
 static void calc_pov( scene_t *s )
 {
 	int i;
-	GLfloat angle_1=s->camera.lr_rot+45;
-	GLfloat angle_2=s->camera.lr_rot-45;
+	GLfloat angle_1=s->camera.lr_rot+40;
+	GLfloat angle_2=s->camera.lr_rot-40;
 	GLfloat angle_3=s->camera.lr_rot+90;
 	GLfloat plane[3][3];
 	
@@ -92,7 +93,7 @@ static void calc_pov( scene_t *s )
 static void render_setup_camera(scene_t *s)
 {
     #ifdef DRAW
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	glLoadIdentity();
 //	render_hud( s );

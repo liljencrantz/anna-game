@@ -28,17 +28,18 @@ Actor = wrapper.make(
 	       self.__peer.posZ=vec[3]
 	    end
       },
-   
+      
    })
 
-function Actor:constructor(name)
+function Actor:constructor(scene,name)
    self.__peer  = anna.ActorPeer.create(name)
    self.actions = {}
-
+   self.scene=scene
    self.walkSpeed = 8.0
    self.turnSpeed = 250.0
    self.walkSpeedReverse = 3.0
    self.angle = 0
+   self:animationInit()
 end
 
 function Actor:step(scene, dt)
@@ -71,5 +72,21 @@ function Actor:step(scene, dt)
       pos[3] = scene:getHeight(pos[1], pos[2])
       self.pos = pos
    end
+
+   self:animate()
+end
+
+function Actor:animationInit()
+   
+   self.body = anna.BallPeer.create(
+      self.scene.__peer, "body1",0.6)
+
+end
+
+function Actor:animate()
+   self.body:setLocation(
+      self.scene.__peer, 
+      self.pos[1], self.pos[2], self.pos[3]+1, 
+      self.angle,0)
 end
 

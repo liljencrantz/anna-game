@@ -98,6 +98,15 @@ static inline void normalize( float *a, float *res, int len )
     }
 }
 
+static inline rotate_z(float *v, float a)
+{
+    float f1 = cos(a);
+    float f2 = sin(a);
+    float tmp = v[0]*f1 - v[1]*f2;
+    v[1] = v[0]*f2 + v[1]*f1;
+    v[0] = tmp;
+}
+
 void subtract( float *a, float *b, float *res, int len );
 void add( float *a, float *b, float *res, int len );
 void copy( float *a, float *res, int len );

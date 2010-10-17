@@ -6,3 +6,5 @@ liblua
 gmon.out
 anna
 tile_test
+.*
+*.err

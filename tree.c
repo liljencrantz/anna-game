@@ -2,6 +2,7 @@
 
 #include <GL/gl.h>	
 #include <GL/glu.h>    
+#include <assert.h>    
 
 #include "SDL/SDL_image.h"
 
@@ -10,7 +11,7 @@
 
 tree_type_t *tree_type;
 
-
+/*
 GLuint load_texture(const char* file)
 {
    SDL_Surface* surface = IMG_Load(file);
@@ -38,108 +39,46 @@ GLuint load_texture(const char* file)
    SDL_FreeSurface(surface);
    return texture;
 }
-
+*/
 void add_section(
-    tree_type_t *t, GLuint tid, GLfloat w,
-    GLfloat p1x, GLfloat p1y, GLfloat p1z, 
-    GLfloat p2x, GLfloat p2y, GLfloat p2z)
-{
-    t->section[t->section_count].type = TREE_SECTION_REGULAR;
-    t->section[t->section_count].texture_id = tid;
-    t->section[t->section_count].width = w;
-    t->section[t->section_count].pos1[0] = p1x;
-    t->section[t->section_count].pos1[1] = p1y;
-    t->section[t->section_count].pos1[2] = p1z;
-    t->section[t->section_count].pos2[0] = p2x;
-    t->section[t->section_count].pos2[1] = p2y;
-    t->section[t->section_count].pos2[2] = p2z;
-    
-    subtract(
-	t->section[t->section_count].pos1,
-	t->section[t->section_count].pos2,
-	t->section[t->section_count].normal,
-	3);
-
-    normalize(
-	t->section[t->section_count].normal,
-	t->section[t->section_count].normal,
-	3);
-    t->section_count++;
-}
-
-void add_jsection(
-    tree_type_t *t, GLuint tid1, GLuint tid2, GLfloat w1, GLfloat w2,
+    tree_type_t *t, tree_section_type_t *type, GLfloat w,
     GLfloat p1x, GLfloat p1y, GLfloat p1z)
 {
-    t->section[t->section_count].type = TREE_SECTION_JOINT;
-    t->section[t->section_count].texture_id = tid1;
-    t->section[t->section_count].width = w1;
-    t->section[t->section_count].pos1[0] = 
-	t->section[t->section_count-1].pos2[0];
-    t->section[t->section_count].pos1[1] = 
-	t->section[t->section_count-1].pos2[1];
-    t->section[t->section_count].pos1[2] = 
-	t->section[t->section_count-1].pos2[2];
-    t->section_count++;
+    tree_section_t *s = &t->section[t->section_count];
+    s->type = type;
+    s->width = w;
+    s->pos[0] = p1x;
+    s->pos[1] = p1y;
+    s->pos[2] = p1z;
 
+    if(t->section_count > 0 && s->type)
+    {
+	tree_section_t *p = &t->section[t->section_count-1];
+	subtract(
+	    p->pos,
+	    s->pos,
+	    s->normal,
+	    3);
+	
+	s->length = sqrt(dot_prod(s->normal, s->normal, 3));
+	
+	normalize(
+	    s->normal,
+	    s->normal,
+	    3);
 
-    t->section[t->section_count].type = TREE_SECTION_REGULAR;
-    t->section[t->section_count].texture_id = tid2;
-    t->section[t->section_count].width = w2;
-    t->section[t->section_count].pos1[0] = 
-	t->section[t->section_count-2].pos2[0];
-    t->section[t->section_count].pos1[1] = 
-	t->section[t->section_count-2].pos2[1];
-    t->section[t->section_count].pos1[2] = 
-	t->section[t->section_count-2].pos2[2];
-    t->section[t->section_count].pos2[0] = p1x;
-    t->section[t->section_count].pos2[1] = p1y;
-    t->section[t->section_count].pos2[2] = p1z;
-    subtract(
-	t->section[t->section_count].pos1,
-	t->section[t->section_count].pos2,
-	t->section[t->section_count].normal,
-	3);
-
-    normalize(
-	t->section[t->section_count].normal,
-	t->section[t->section_count].normal,
-	3);
-    t->section_count++;
-}
-
-void add_joint(
-    tree_type_t *t, GLuint tid, GLfloat w,
-    GLfloat p1x, GLfloat p1y, GLfloat p1z)
-{
-    t->section[t->section_count].type = TREE_SECTION_JOINT;
-    t->section[t->section_count].texture_id = tid;
-    t->section[t->section_count].width = w;
-    t->section[t->section_count].pos1[0] = p1x;
-    t->section[t->section_count].pos1[1] = p1y;
-    t->section[t->section_count].pos1[2] = p1z;
-    t->section_count++;
-}
-
-void add_points(
-    tree_type_t *t, GLfloat pw, GLfloat cw,
-    GLfloat p1x, GLfloat p1y, GLfloat p1z,
-    GLubyte *color, char count)
-{
-    tree_section_points_t *tsp = 
-	(tree_section_points_t *)&(t->section[t->section_count]);
-    tsp->type = TREE_SECTION_POINTS;
-    
-    tsp->point_width=pw;
-    tsp->cloud_width=cw*2;
-    tsp->pos[0]=p1x;
-    tsp->pos[1]=p1y;
-    tsp->pos[2]=p1z;
-    normalize(tsp->pos, tsp->normal, 2);
-    tsp->color[0] = color[0];
-    tsp->color[1] = color[1];
-    tsp->color[2] = color[2];
-    tsp->count = count;
+	for(int i=0; i<3; i++)
+	{
+	    printf(
+		"%.2f %.2f\n", 
+		s->pos[i]+s->normal[i]*s->length,
+		p->pos[i]);
+	    
+	    assert(fabs(s->pos[i]+s->normal[i]*s->length - p->pos[i])< 0.01);
+	    
+	}
+	
+    }
     t->section_count++;
 }
 
@@ -148,295 +87,275 @@ tree_type_t *tree_load(char *name)
     tree_type_t *res = malloc(sizeof(tree_type_t) + 300 * sizeof(tree_section_t));
     
     res->section_count=0;
-    GLuint tid = load_texture("textures/branch5.png");
-    GLuint stem1_tid = load_texture("textures/stem1.png");
-    GLuint stem2_tid = load_texture("textures/stem2.png");
-    GLuint stem3_tid = load_texture("textures/stem3.png");
-    GLuint branch1_tid = load_texture("textures/branch1.png");
-    GLuint branch2_tid = load_texture("textures/branch2.png");
-    GLuint branch3_tid = load_texture("textures/branch3.png");
-    GLuint branch4_tid = load_texture("textures/branch4.png");
-    GLuint root1_tid = load_texture("textures/root1.png");
-    GLuint connection1_tid = load_texture("textures/connection1.png");
-    GLuint jtid = load_texture("textures/connection2.png");
 
-    GLubyte col[]=
+    float branch_data[][3]=
 	{
-	    45,
-	    70,
-	    35
+	    {0.00, 1.00, 1.00},
+	    {0.06, 1.33, 1.03},
+	    {0.11, 0.90, 1.20},
+	    {0.18, 1.33, 0.57},
+	    {0.28, 0.57, 0.93},
+	    {0.53, 0.57, 0.84},
+	    {0.62, 0.31, 1.07},
+	    {0.74, 0.64, 0.80},
+	    {0.91, 0.38, 0.80},
+	    {1.00, 0.70, 0.70}
 	}
     ;
+
+    tree_section_type_t *t1 = malloc(sizeof(tree_section_type_t) + 10*sizeof(float[3]));
+    t1->count=10;
+    memcpy(t1->data, branch_data, 10*sizeof(float[3]));
+
+#include "tree_branch_data.c"
+
+    tree_section_type_t * connection1_tid = t1;
+    tree_section_type_t * jtid = t1;
     
     /*
       Stem
      */
-    add_joint(
-	res, jtid, 0.7, 
-	0.0, 0.0, 0.35);
+    add_section(
+	res, 0, 0, 
+	0.0, 0.0, 0.0);    
     add_section(
 	res, stem1_tid, 0.77, 
-	0.0, 0.0, 0.0,
 	-0.1, -0.06, 1.99);
-    add_jsection(
-	res, jtid, stem3_tid, 0.50, 0.55, 
+    add_section(
+	res,  stem3_tid, 0.55, 
 	-0.1, -1.09, 2.89);
-    add_jsection(
-	res, jtid, stem2_tid, 0.29, 0.33, 
+    add_section(
+	res, stem2_tid, 0.33, 
 	0.1, 0.0, 4.21);
-    add_jsection(
-	res, jtid, stem3_tid, 0.19, 0.21, 
+    add_section(
+	res, stem3_tid, 0.21, 
 	0.2, 1.38, 3.10);
-    add_jsection(
-	res, jtid, stem3_tid, 0.16, 0.18, 
+    add_section(
+	res,  stem3_tid, 0.18, 
 	0.3, 0.65, 2.31);
-    add_jsection(
-	res, jtid, stem3_tid, 0.12, 0.15, 
+    add_section(
+	res,  stem3_tid, 0.15, 
 	0.4, -0.11, 3.22);
-    add_jsection(
-	res, jtid, branch2_tid, 0.1, 0.1, 
+    add_section(
+	res,  branch2_tid, 0.09, 
 	0.5, 0.13, 3.6);
-    add_jsection(
-	res, jtid, branch4_tid, 0.05, 0.07, 
+    add_section(
+	res,  branch4_tid, 0.08, 
 	0.53, 0.32, 3.41);
-    add_jsection(
-	res, jtid, branch4_tid, 0.02, 0.05, 
+    add_section(
+	res,  branch4_tid, 0.07, 
 	0.55, 0.25,3.34);
-    add_points(
-	res, 0.2, 0.3, 
-	0.55, 0.35, 3.34, col, 12);
 
 
     /* Branch 1 */
     add_section(
-	res, branch1_tid, 0.15, 
-	0.13, 0.0, 0.91, 
+	res, 0, 0,
+	0.13, 0.0, 0.91);
+    add_section(
+	res, branch1_tid, 0.15,     
 	0.84, 0.0, 2.0);
-    add_jsection(
-	res, jtid, branch2_tid, 0.04, 0.05, 
+    add_section(
+	res, branch2_tid, 0.05, 
 	0.55, 0.0, 2.08);
-    add_jsection(
-	res, jtid, branch2_tid, 0.04, 0.05, 
+    add_section(
+	res, branch2_tid, 0.06, 
 	0.39, 0.0, 1.83);
-    add_jsection(
-	res, jtid, tid, 0.04, 0.05, 
+    add_section(
+	res, branch5_tid, 0.05, 
 	0.53, 0.0, 1.81);
-    add_points(
-	res, 0.2, 0.3, 
-	0.53, 0.0, 1.81, col, 16);
-    
 
     add_section(
-	res, tid, 0.05, 
-	0.75, 0.0, 1.84, 
+	res, 0, 0, 
+	0.75, 0.0, 1.87);
+    add_section(
+	res, branch2_tid, 0.05, 
 	1.26, 0.0, 1.59);
-    add_jsection(
-	res, jtid, tid, 0.03, 0.04, 
+    add_section(
+	res, branch2_tid, 0.04, 
 	0.95, 0.0, 1.11 );
-    add_jsection(
-	res, jtid, tid, 0.03, 0.04, 
+    add_section(
+	res, branch2_tid, 0.04, 
 	0.7, 0.0, 1.2);
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
-	0.75, 0.0, 1.3);
-    add_points(
-	res, 0.2, 0.3, 
-	0.75, 0.0, 1.3, col, 16);
 
-
+    add_section(
+	res, 0,0,
+	0.91, 0.0, 1.75);
+    
     add_section(
 	res, branch3_tid, 0.04, 
-	0.91, 0.0, 1.75, 
 	1.22, 0.01, 1.85);
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	1.25, 0.02, 1.75);
-    add_points(
-	res, 0.2, 0.3, 
-	1.25, 0.02, 1.75, col, 16);
-
-
 
     /* Branch 2 */
     add_section(
+	res, 0,0,
+	-0.13, 0.0, 1.21);
+    
+    add_section(
 	res, branch1_tid, 0.1, 
-	-0.13, 0.0, 1.21, 
 	-0.84, 0.0, 2.5);
-    add_jsection(
-	res, jtid, branch2_tid, 0.02, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	-0.55, 0.0, 2.58);
-    add_jsection(
-	res, jtid, branch2_tid, 0.01, 0.025, 
+    add_section(
+	res, branch2_tid, 0.025, 
 	-0.39, 0.1, 1.83+0.5);
-    add_points(
-	res, 0.2, 0.3, 
-	-0.39, 0.1, 1.83+0.5, col, 8);
 
 
     
 
     add_section(
-	res, tid, 0.035, 
-	-0.75, 0.0, 1.84+0.5, 
+	res, 0,0,
+	-0.75, 0.0, 1.84+0.5);
+    add_section(
+	res, branch2_tid, 0.035, 
 	-1.26, 0.0, 1.59+0.5);
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	-0.95, 0.0, 1.11+0.5 );
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	-0.7, 0.0, 1.2+0.5);
-    add_jsection(
-	res, jtid, tid, 0.02, 0.025, 
+    add_section(
+	res, branch2_tid, 0.025, 
 	-0.75, 0.0, 1.3+0.5);
-    add_points(
-	res, 0.2, 0.3, 
-	-0.75, -0.3, 1.3+0.5, col, 8);
 
 
     add_section(
+	res, 0,0,
+	-0.91, 0.0, 1.75+0.5);
+    add_section(
 	res, branch3_tid, 0.04, 
-	-0.91, 0.0, 1.75+0.5, 
 	-1.22, 0.01, 1.85+0.5);
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	-1.25, 0.02, 1.75+0.5);
-    add_points(
-	res, 0.2, 0.3, 
-	-1.25, 0.3, 1.75+0.5, col, 12);
-
-
 
     /* Branch 3 */
     
     add_section(
+	res, 0,0,
+	0.0, -0.48, 2.23);
+    
+    add_section(
 	res, branch2_tid, 0.1, 
-	0.0, -0.48, 2.23, 
 	0.0, -1.44, 2.35);
-    add_jsection(
-	res, jtid, branch3_tid, 0.08, 0.1, 
+    add_section(
+	res, branch3_tid, 0.1, 
 	0.0, -1.5, 2.6);
-    add_jsection(
-	res, jtid, branch2_tid, 0.04, 0.05, 
+    add_section(
+	res, branch2_tid, 0.05, 
 	0.0, -1.29, 2.63);
-    add_jsection(
-	res, jtid, branch2_tid, 0.03, 0.04, 
+    add_section(
+	res, branch2_tid, 0.04, 
 	0.0, -1.23, 2.53
 	);
-    add_points(
-	res, 0.2, 0.3, 
-	0.0, -1.23, 2.53, col, 16);
         
     /* Branch 4*/
 
     add_section(
+	res, 0,0,
+	0.0, -0.69, 3.4);
+    
+    add_section(
 	res, branch1_tid, 0.15, 
-	0.0, -0.69, 3.4, 
 	0.05, -0.8, 4.64);
-    add_jsection(
-	res, jtid, branch2_tid, 0.05, 0.06, 
+    add_section(
+	res, branch2_tid, 0.06, 
 	0.05, -0.28, 4.52);    
-    add_jsection(
-	res, jtid, tid, 0.03, 0.04, 
+    add_section(
+	res, branch2_tid, 0.04, 
 	0.05, -0.35, 4.26);
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	0.05, -0.53, 4.24);
-    add_points(
-	res, 0.2, 0.3, 
-	0.05, -0.53, 4.24, col, 16);
 
     /* Branch 5 */
     add_section(
+	res, 0, 0,
+	0.0, -1.08, 2.86);
+    
+    add_section(
 	res, branch1_tid, 0.10, 
-	0.0, -1.08, 2.86, 
 	-0.3, -1.59, 3.56);
-    add_jsection(
-	res, jtid, tid, 0.03, 0.04, 
+    add_section(
+	res, branch2_tid, 0.04, 
 	-0.4, -1.38, 3.79);
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	-0.45, -1.22, 3.5);
 
-    add_joint(
-	res, jtid, 0.08, 
-	0.035, -0.80, 4.27);
+    add_section(
+	res, 0,0,
+	0.035, -0.70, 4.27);
     add_section(
 	res, branch1_tid, 0.10, 
-	0.035, -0.80, 4.27, 
 	0.035, -1.65, 4.24);
-    add_jsection(
-	res, jtid, tid, 0.03, 0.04, 
+    add_section(
+	res, branch2_tid, 0.04, 
 	0.05, -1.7, 4.46);
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	0.08, -1.53, 4.46);
-    add_points(
-	res, 0.2, 0.3, 
-	0.08, -1.53, 4.46, col, 16);
+
 
     add_section(
+	res, 0,0,
+	0.35, 0.39, 2.62);
+    add_section(
 	res, branch4_tid, 0.15, 
-	0.35, 0.39, 2.62, 
 	0.15, -0.3, 2.66);
-    add_jsection(
-	res, jtid, tid, 0.03, 0.03, 
+    add_section(
+	res, branch2_tid, 0.03, 
 	0.05, -0.41, 2.99);
-    add_jsection(
-	res, jtid, tid, 0.02, 0.02, 
+    add_section(
+	res, branch2_tid, 0.02, 
 	0.05, -0.08, 2.99);
 
-    add_points(
-	res, 0.2, 0.3, 
-	0.05, -0.08, 2.99, col, 16);
-
 /*
-    add_jsection(
-	res, jtid, tid, 0.025, 0.03, 
+    add_section(
+	res, branch2_tid, 0.025, 0.03, 
 	0.08, -1.53, 4.46);
 */
 
     /* Branch 6 */
     add_section(
+	res, 0,0,
+	0.15, 0.06, 4.19);
+    add_section(
 	res, branch1_tid, 0.1, 
-	0.15, 0.06, 4.19, 
 	0.15, 1.08, 4.22);
-    add_jsection(
-	res, jtid, tid, 0.03, 0.02, 
+    add_section(
+	res, branch2_tid, 0.02, 
 	0.15, 1.07, 4.34);
 
-    add_points(
-	res, 0.2, 0.3, 
-	0.15, 1.07, 4.34, col, 8);
+    add_section(
+	res, 0,0,
+	0.15, 0.70, 4.21);
     
     add_section(
-	res, tid, 0.05, 
-	0.15, 0.70, 4.21, 
+	res, branch2_tid, 0.05, 
 	0.40, 0.78, 4.22);
-    add_jsection(
-	res, jtid, tid, 0.02, 0.02, 
+    add_section(
+	res, branch2_tid, 0.02, 
 	0.45, 0.27, 4.18);
-    add_jsection(
-	res, jtid, tid, 0.02, 0.02, 
+    add_section(
+	res, branch2_tid, 0.02, 
 	0.65, 0.31, 4.17);
-    
-    add_points(
-	res, 0.2, 0.3, 
-	0.65, 0.31, 4.17, col, 4);
 
     /* Branch 7 */
     add_section(
-	res, branch4_tid, 0.15, 
-	0.2, 1.35, 3.16, 
-	0.2, 1.55, 2.5);
-    add_jsection(
-	res, jtid, tid, 0.03, 0.02, 
-	0.2, 1.33, 2.31);
-
-    add_points(
-	res, 0.2, 0.3, 
-	0.2, 1.33, 2.31, col, 12);
-
+	res, 0,0,
+	0.2, 1.35, 3.16);
     
+    add_section(
+	res, branch4_tid, 0.15, 
+	0.2, 1.55, 2.5);
+    add_section(
+	res, branch2_tid, 0.02, 
+	0.2, 1.33, 2.31);
 
     
     /*
@@ -444,78 +363,46 @@ tree_type_t *tree_load(char *name)
      */
 
     add_section(
+	res, 0,0,
+	0.0, 0.5* -0.29, 0.16);
+    add_section(
 	res, root1_tid, 0.16, 
-	0.0, 0.5* -0.29, 0.16,
 	0.0, -0.86, 0.08
 	);
+
+    add_section(
+	res, 0,0,
+	0.5*-0.27, 0.5*-0.08, 0.16);
     add_section(
 	res, root1_tid, 0.16, 
-	0.5*-0.27, 0.5*-0.08, 0.16,
 	-0.81, -0.26, 0.08
 	);
+
+    add_section(
+	res, 0,0,
+	0.5*-0.17, 0.5*0.234, 0.16);
     add_section(
 	res, root1_tid, 0.16, 
-	0.5*-0.17, 0.5*0.234, 0.16,
 	-0.5, 0.69, 0.08
 	);
+
+    add_section(
+	res, 0,0,
+	0.5*0.17, 0.5*0.234, 0.16);
     add_section(
 	res, root1_tid, 0.16, 
-	0.5*0.17, 0.5*0.234, 0.16,
 	0.5, 0.69, 0.08
 	);
+
+    add_section(
+	res, 0,0,
+	0.5*0.27, 0.5*-0.08, 0.16);
     add_section(
 	res, root1_tid, 0.16, 
-	0.5*0.27, 0.5*-0.08, 0.16,
 	0.81, -0.69, 0.08
 	);
-    
-    /*
-
-    res->section[0].width=0.5;
-    res->section[0].pos1[0] = 0.0;
-    res->section[0].pos1[1] = 0.0;
-    res->section[0].pos1[2] = 0.0;
-
-    res->section[0].pos2[0] = 0.0;
-    res->section[0].pos2[1] = -0.06;
-    res->section[0].pos2[2] = 1.99;
-    
-    
-    res->section[1].texture_id = res->section[0].texture_id;
-    res->section[1].width=0.3;
-
-    res->section[1].pos1[0] = 0.0;
-    res->section[1].pos1[1] = 0.13;
-    res->section[1].pos1[2] = 1.76;
-
-    res->section[1].pos2[0] = 0.0;
-    res->section[1].pos2[1] = 0.8;
-    res->section[1].pos2[2] = 2.2;
-    
-
-    res->section[2].texture_id = res->section[0].texture_id;
-    res->section[2].width=0.25;
-
-    res->section[2].pos1[0] = 0.0;
-    res->section[2].pos1[1] = 0.8;
-    res->section[2].pos1[2] = 2.2;
-
-    res->section[2].pos2[0] = 0.0;
-    res->section[2].pos2[1] = 0.15;
-    res->section[2].pos2[2] = 3.0;
 
     
-    res->section[3].texture_id = res->section[0].texture_id;
-    res->section[3].width=0.2;
-
-    res->section[3].pos1[0] = 0.0;
-    res->section[3].pos1[1] = 0.15;
-    res->section[3].pos1[2] = 3.0;
-
-    res->section[3].pos2[0] = 0.0;
-    res->section[3].pos2[1] = -0.8;
-    res->section[3].pos2[2] = 2.5;
-    */
     return res;    
 }
 

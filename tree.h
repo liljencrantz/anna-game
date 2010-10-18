@@ -9,27 +9,20 @@
 
 typedef struct 
 {
-    int type;
-    
-    GLuint texture_id;
+    int count;
+    float data[][3];
+}
+    tree_section_type_t;
+
+typedef struct 
+{
+    tree_section_type_t *type;
     GLfloat width;
-    GLfloat pos1[3];
-    GLfloat pos2[3];
+    GLfloat length;
+    GLfloat pos[3];
     GLfloat normal[3];
 }
     tree_section_t;
-
-typedef struct
-{
-    int type;
-    GLfloat point_width;
-    GLfloat cloud_width;
-    GLfloat pos[3];
-    GLfloat normal[2];
-    GLubyte color[3];
-    char count;
-}
-    tree_section_points_t;
 
 
 typedef struct

@@ -98,7 +98,7 @@ static inline void normalize( float *a, float *res, int len )
     }
 }
 
-static inline rotate_z(float *v, float a)
+static inline void rotate_z(float *v, float a)
 {
     float f1 = cos(a);
     float f2 = sin(a);

@@ -27,18 +27,12 @@ void render_section(tree_section_t *sec, GLfloat *view_dir)
     {
 
 //    glBindTexture( GL_TEXTURE_2D, sec->texture_id );
-	
-	glColor3f(0.0,0.0,0.0);
 
 	int i;
 	
 	for(i=0; i<sec->type->count; i++)
 	{
 	    float f = 1.0-sec->type->data[i][0];
-	    
-	    assert(f >= 0.0);
-	    assert(f <= 1.0);
-	    
 	    float px = sec->pos[0] + 
 		sec->length*sec->normal[0]*f;
 
@@ -124,26 +118,36 @@ void render_tree_leaves(scene_t *s, tree_t *t)
     
 //    view_dir[2]-= corr;
     
-    glTranslatef( t->pos[0], t->pos[1]-0.6, t->pos[2]+corr+ 3.3);
+    glTranslatef( t->pos[0], t->pos[1]-0.0, t->pos[2]+corr+ 3.3);
     glRotatef(t->angle, 0,0,1);
     rotate_z(view_dir, -t->angle*M_PI/180);
+    //normalize(view_dir, view_dir, 3);
     glColor4f(0.2,0.4,0.1,1);
     
     glBegin( GL_TRIANGLE_FAN );
+    float up[]=
+	{
+	    0,0,1
+	}
+    ;
+    float side[3];
+    cross_prod(view_dir, up, side);
+    normalize(side,side,3);
     
     int i;
-    glVertex3f(0.8,0,0);
+    glVertex3f(-3.8*side[1],3.8*side[0],0);
 
+#define LALA 0.0
     for(i=0; i<vec_count; i++)
     {
-	float x = 0.4;
-	float y = -(vec[i][0]-middle[0])*scale;
+	float y = LALA * side[0] - (vec[i][0]-middle[0])*scale*side[1];
+	float x = -LALA * side[1] - (vec[i][0]-middle[0])*scale*side[0];
 	float z = (middle[1]-vec[i][1])*scale;
 	glVertex3f(x,y,z);
     }    
     {
-	float x = 0.4;
-	float y = -(vec[0][0]-middle[0])*scale;
+	float y = LALA * side[0] - (vec[0][0]-middle[0])*scale*side[1];
+	float x = -LALA * side[1] - (vec[0][0]-middle[0])*scale*side[0];
 	float z = (middle[1]-vec[0][1])*scale;
 	glVertex3f(x,y,z);
     }
@@ -168,9 +172,11 @@ void render_tree_trunk(scene_t *s, tree_t *t)
     
     glTranslatef( t->pos[0], t->pos[1], t->pos[2]+corr);
     glRotatef(t->angle, 0,0,1);
+    glColor3f(0.2,0.2,0.05);
 
-#define NORMALIZE_SECTION_DIST 200.0
-
+    //printf("LALA %.2f\n", t->angle);
+    
+#define NORMALIZE_SECTION_DIST 00.0
     
     GLfloat distance_sq = view_dir[0]*view_dir[0] + view_dir[1]*view_dir[1];
     if( distance_sq >= NORMALIZE_SECTION_DIST )
@@ -237,7 +243,7 @@ int rndc()
 
 void render_trees_leaves(scene_t *s)
 {
-
+        
     glShadeModel( GL_FLAT );
     
     int i;
@@ -256,7 +262,7 @@ void render_trees_leaves(scene_t *s)
     }
 
     glShadeModel(GL_SMOOTH);
-    
+        
 }
 
 void render_trees_trunk(scene_t *s)
@@ -266,10 +272,9 @@ void render_trees_trunk(scene_t *s)
 //    glEnable( GL_ALPHA_TEST );
     glEnable( GL_BLEND );
 
-    glDepthMask( GL_FALSE );
+//    glDepthMask( GL_FALSE );
     glShadeModel( GL_FLAT );
 
-    glColor3f(0.0,0.0,0.0);
 
     int i;
     
@@ -280,7 +285,7 @@ void render_trees_trunk(scene_t *s)
 	    render_tree_trunk(s, tree);
     }
     
-    glDepthMask( GL_TRUE );
+    //  glDepthMask( GL_TRUE );
 //    glDisable(GL_TEXTURE_2D);
 //    glDisable( GL_ALPHA_TEST );
     glDisable( GL_BLEND );
@@ -305,7 +310,7 @@ void render_trees_init()
     }
     
     render_register(render_trees_leaves, RENDER_PASS_SOLID);    
-    render_register(render_trees_trunk, RENDER_PASS_TRANSPARENT);    
+    render_register(render_trees_trunk, RENDER_PASS_SOLID);    
     
 }
 

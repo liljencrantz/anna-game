@@ -2,11 +2,13 @@
 #define SCENE_H
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "tile.h"
 #include "view.h"
 #include "tree.h"
 #include "ball.h"
+#include "boid.h"
 
 typedef struct
 {
@@ -33,6 +35,9 @@ typedef struct
     
     ball_t ball[1024];
     size_t ball_count;
+    
+    boid_set_t *boid_set[16];
+    size_t boid_set_count;
     
 }
 scene_t;
@@ -109,9 +114,9 @@ static inline int scene_tree_create(
     t->pos[0] = pos[0];
     t->pos[1] = pos[1];
     t->pos[2] = scene_get_height(s, pos[0], pos[1]);
-    printf("Create tree at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
+    //printf("Create tree at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
     t->type = tree_type_get(tree_type_name);
-    t->angle = 0.0;
+    t->angle = angle;
     t->radius = 3.0;
     t->scale = 1.0;
     return s->tree_count++;
@@ -152,6 +157,38 @@ static inline int scene_ball_create(
     t->angle2 = 0.0;
     t->scale = scale;
     return s->ball_count++;
+}
+
+
+
+
+static inline void scene_boid_set_destroy(
+    scene_t *s, 
+    int tid)
+{
+    free(s->boid_set[tid]);
+    s->boid_set[tid] = s->boid_set[--s->boid_set_count];
+}
+
+
+static inline boid_set_t *scene_boid_set_get(scene_t *s, size_t idx)
+{
+    return s->boid_set[idx];
+}
+
+static inline size_t scene_boid_set_get_count(scene_t *s)
+{
+    return s->boid_set_count;
+}
+
+static inline int scene_boid_set_create(
+    scene_t *s,
+    int count,
+    float x,
+    float y)
+{
+    s->boid_set[s->boid_set_count] = boid_set_init(count, x, y);
+    return s->boid_set_count++;
 }
 
 

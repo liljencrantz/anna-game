@@ -107,6 +107,24 @@ static inline void rotate_z(float *v, float a)
     v[0] = tmp;
 }
 
+static inline void rotate_y(float *v, float a)
+{
+    float f1 = cos(a);
+    float f2 = sin(a);
+    float tmp = v[0]*f1 + v[2]*f2;
+    v[2] = -v[0]*f2 + v[2]*f1;
+    v[0] = tmp;
+}
+
+static inline void rotate_x(float *v, float a)
+{
+    float f1 = cos(a);
+    float f2 = sin(a);
+    float tmp = v[1]*f1 - v[2]*f2;
+    v[2] = v[1]*f2 + v[2]*f1;
+    v[1] = tmp;
+}
+
 void subtract( float *a, float *b, float *res, int len );
 void add( float *a, float *b, float *res, int len );
 void copy( float *a, float *res, int len );

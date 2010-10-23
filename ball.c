@@ -47,7 +47,9 @@ ball_type_t *ball_load(char *name)
     {
 	for(j=0;j<side_size;j++)
 	{
-	    res->data[ball_idx(level, i, j)].radius = (2.0 + sin((float)i/side_size*M_PI*4)*sin((float)j/(side_size-1)*M_PI*4))/3.0;
+//	    res->data[ball_idx(level, i, j)].radius = (2.0 + sin((float)i/side_size*M_PI*4)*sin((float)j/(side_size-1)*M_PI*4))/3.0;
+//	    res->data[ball_idx(level, i, j)].radius = (9.0 + fabs(sin(4.0*(float)i/side_size*M_PI*4)+sin(2.0*(float)j/(side_size-1)*M_PI*4)))/10.0;
+	    res->data[ball_idx(level, i, j)].radius = (4.0 + cos(1.0*(float)j/(side_size-1)*M_PI*2))/6.0;
 	}	
     }
 

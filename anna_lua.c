@@ -13,6 +13,7 @@
 #include "screen.h"
 #include "render.h"
 #include "tile.h"
+#include "boid.h"
 #include "liblua/src/lua.h"
 #include "liblua/src/lauxlib.h"
 #include "liblua/src/lualib.h"
@@ -21,6 +22,58 @@
 static lua_State *L;    
 
 void tile_calc(scene_t *s, int level_count);
+
+static float florp()
+{
+    return 0.06*(((2.0*rand())/RAND_MAX)-1.0);
+}
+
+
+static void tile_diamond(tile_t *t, int lvl, int x1, int y1, int x2, int y2)
+{
+//    printf("!!! %d %d %d %d", x1,y1,x2,y2);    
+    if((x2-x1) < 2)
+	return;
+    if((y2-y1) < 2)
+	return;
+    
+    int xm = (x1+x2)/2;
+    int ym = (y1+y2)/2;
+    float xd = x2-x1;
+    float yd = y2-y1;
+
+    float hx1y1=0, hx2y1=0, hx1y2=0,hx2y2=0;
+    hx1y1 = tile_hid_lookup(t,hid(lvl,x1,y1))->height;
+    if( x2 < (2<<lvl))
+    {
+	hx2y1 = tile_hid_lookup(t,hid(lvl,x2,y1))->height;
+	
+	if(y2< (2<<lvl))
+	{
+	    hx2y2 = tile_hid_lookup(t,hid(lvl,x2,y2))->height;
+	    hx1y2 = tile_hid_lookup(t,hid(lvl,x1,y2))->height;
+	}
+    
+    }
+    else if(y2< (2<<lvl))
+    {
+	hx1y2 = tile_hid_lookup(t,hid(lvl,x1,y2))->height;
+    }
+    
+    tile_hid_lookup(t,hid(lvl,xm,y1))->height =
+	(hx1y1+hx2y1)*0.5+
+	florp()*(xd);
+    tile_hid_lookup(t,hid(lvl,x1,ym))->height =
+	(hx1y1+hx1y2)*0.5+
+	florp()*(yd);
+    tile_hid_lookup(t,hid(lvl,xm,ym))->height =
+	(hx1y1+hx2y1+hx1y2+hx2y2)*0.25+
+	florp()*(xd);
+    tile_diamond(t,lvl, xm,ym,x2,y2);
+    tile_diamond(t,lvl, x1,ym,xm,y2);
+    tile_diamond(t,lvl, xm,y1,x2,ym);
+    tile_diamond(t,lvl, x1,y1,xm,ym);
+}
 
 
 static void load_temp_tile_data(scene_t *s)
@@ -33,6 +86,9 @@ static void load_temp_tile_data(scene_t *s)
     {
 	t->subtile[i] = calloc(1, sizeof(tile_t));
     }
+    
+    tile_diamond(t, 7, 0, 0, (2<<7), (2<<7));    
+
     for(i=0; i<(2<<7); i++)
     {
 	for(j=0; j<(2<<7); j++)
@@ -43,7 +99,8 @@ static void load_temp_tile_data(scene_t *s)
 	    assert(i == HID_GET_X_POS(hid));
 	    assert(j == HID_GET_Y_POS(hid));
 	    
-	    tile_hid_lookup(t,hid)->height = 1.5*sin(0.3*i)+1.5*sin(0.3*j);
+	    tile_hid_lookup(t,hid)->height += (sin(0.3*(i+0.5*sin(j)))*sin(0.3*j+0.5*sin(i))) * 1.5;
+	    //tile_hid_lookup(t,hid)->height = 2;//(sin(0.3*i)*sin(0.3*j)) * (1.5 + sin(0.1*(i))*sin(0.1*j)) + 0.05*(sin(3.0*i)*sin(3.0*j))+ 0.1*(sin(1.1*i)*sin(1.1*j));
 	    tile_hid_lookup(t,hid)->color[0] = 42;
 	    tile_hid_lookup(t,hid)->color[1] = 84;
 	    tile_hid_lookup(t,hid)->color[2] = 42;
@@ -286,6 +343,19 @@ static int lua_ball_create (lua_State *L)
         
     return 1;
 }
+static int lua_boid_set_create (lua_State *L)
+{
+    int *res = (int *)lua_newuserdata(L, sizeof(int));
+    luaL_getmetatable(L, "BoidSetPeer");
+    lua_setmetatable(L, -2);    
+    *res = scene_boid_set_create(
+	(scene_t *)lua_topointer(L, 1),
+	luaL_checkint(L, 2),
+	luaL_checknumber(L, 3),
+	luaL_checknumber(L, 4));
+    
+    return 1;
+}
 
 static int lua_ball_set_location(lua_State *L)
 {
@@ -296,14 +366,33 @@ static int lua_ball_set_location(lua_State *L)
     float z = luaL_checknumber(L, 5);
     float a1 = luaL_checknumber(L, 6);
     float a2 = luaL_checknumber(L, 7);
+    float a3 = luaL_checknumber(L, 8);
     ball_t *b = scene_ball_get(s, *t);
-
+    
     b->pos[0]=x;
     b->pos[1]=y;
     b->pos[2]=z;
-
+    
     b->angle1=a1;
     b->angle2=a2;
+    b->angle3=a3;
+    
+    return 0;
+}
+
+
+static int lua_ball_set_offset(lua_State *L)
+{
+    int *t = (int *)check_item(L, 1, "BallPeer");
+    scene_t *s = (scene_t *)lua_topointer(L, 2);
+    float x = luaL_checknumber(L, 3);
+    float y = luaL_checknumber(L, 4);
+    float z = luaL_checknumber(L, 5);
+    ball_t *b = scene_ball_get(s, *t);
+    
+    b->offset[0]=x;
+    b->offset[1]=y;
+    b->offset[2]=z;
 
     return 0;
 }
@@ -332,7 +421,7 @@ static int lua_scene_create (lua_State *L)
     
 //    camera_move(res);    
     res->camera.lr_rot=79;
-    res->camera.ud_rot = 45;
+    res->camera.ud_rot = 65;
 
     return 1;
 }
@@ -532,6 +621,7 @@ void register_types(
 	{"create", lua_ball_create},	
 	{"destroy", lua_ball_destroy},	
 	{"setLocation", lua_ball_set_location},	
+	{"setOffset", lua_ball_set_offset},	
 	{0,0}
     };
 
@@ -575,6 +665,33 @@ void register_types(
 	screen_meta_methods,
 	screen_getters,
 	screen_setters);
+
+    static const register_member_t boid_set_getters[] = {
+	{0,0}
+    };
+
+    static const register_member_t boid_set_setters[] = {
+	{0,0}
+    };
+    
+    static const luaL_reg boid_set_methods[] = {
+	{"create", lua_boid_set_create},	
+	{0,0}
+    };
+
+    static const luaL_reg boid_set_meta_methods[] = {
+	{0,0}
+    };
+    
+    register_type(
+	L,
+	"BoidSetPeer", 
+	boid_set_methods, 
+	boid_set_meta_methods,
+	boid_set_getters,
+	boid_set_setters);
+
+
 }
 
     

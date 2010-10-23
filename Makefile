@@ -6,7 +6,7 @@ PROF_FLAGS := -g -pg
 CFLAGS := -rdynamic -Wall -std=c99 -D_ISO99_SOURCE=1 -D_XOPEN_SOURCE=500 -D_POSIX_C_SOURCE=199309L $(PROF_FLAGS) -O3 -ffast-math -msse4 -mfpmath=sse -march=core2 
 LDFLAGS := -lm -lpthread -rdynamic -ll -lSDL -lSDL_image -lGL -lGLU $(PROF_FLAGS) -ffast-math liblua/src/liblua.a
 
-RENDER_OBJS = render.o render_terrain.o render_trees.o tree.o render_actors.o render_balls.o ball.o ball_calc.o
+RENDER_OBJS = render.o render_terrain.o render_trees.o tree.o render_actors.o render_balls.o ball.o ball_calc.o boid.o render_boids.o
 GENERATE_OBJS = tile_calc.o 
 ANNA_OBJS = $(GENERATE_OBJS) $(RENDER_OBJS) actor.o main.o screen.o util.o scene.o tile.o node.o heightmap_element.o anna_lua.o
 TILE_OBJS = tile_test.o tile.o

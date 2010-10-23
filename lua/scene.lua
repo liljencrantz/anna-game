@@ -3,7 +3,7 @@ module("scene", package.seeall)
 require("anna")
 require("wrapper")
 
-CAMERA_DISTANCE = 2.0
+CAMERA_DISTANCE = 5.0
 
 Scene = wrapper.make(
    {
@@ -65,7 +65,7 @@ Scene = wrapper.make(
 
 function Scene:step(dt)
    self.time = self.time + dt
-   self.player:step(self, dt)
+   self.player:step(dt)
    
    acs = 1.0 - 0.3*dt
    
@@ -87,13 +87,16 @@ function Scene:step(dt)
       end
       self.cameraAngle = ca
    end
-   self.cameraAngle = self.player.angle
+   --self.cameraAngle = self.player.angle
    
-   pos = self.player.pos
-   pos[1] = pos[1] - CAMERA_DISTANCE * math.cos(self.cameraAngle*math.pi/180)
-   pos[2] = pos[2] - CAMERA_DISTANCE * math.sin(self.cameraAngle*math.pi/180)
-   pos[3] = pos[3] + 5
-   self.cameraPos = pos
+   local tpos = self.player.pos
+   tpos[1] = tpos[1] - CAMERA_DISTANCE * math.cos(self.cameraAngle*math.pi/180)
+   tpos[2] = tpos[2] - CAMERA_DISTANCE * math.sin(self.cameraAngle*math.pi/180)
+   tpos[3] = math.max(tpos[3],self:getHeight(tpos[1],tpos[2])) + 8
+   self.cameraPos = {
+      self.cameraPos[1]*0.9 + tpos[1]*0.1,
+      self.cameraPos[2]*0.9 + tpos[2]*0.1,
+      self.cameraPos[3]*0.9 + tpos[3]*0.1}
 
 end
 

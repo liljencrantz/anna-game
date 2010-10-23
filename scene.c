@@ -25,7 +25,7 @@ void scene_init( scene_t *s, int lb, float scene_size )
     s->sun_light = 1.0;
 
     s->scene_size = scene_size;
-    s->render_quality=60.0;
+    s->render_quality=70.0;
 }
 
 float scene_hid_x_coord(scene_t *s, hid_t hid)
@@ -154,13 +154,13 @@ int scene_is_visible(scene_t *s, float *pos, float radius)
 	}
     ;
     float dst_sq = diff[0]*diff[0] + diff[1]*diff[1];
-    if(dst_sq > ((60+radius)*(60+radius)))
+    if(dst_sq > ((80+radius)*(80+radius)))
 	return 0;
     
 
 
 //    printf("Check if node %d %d %d is visible.\n", NID_GET_LEVEL(nid), NID_GET_X_POS(nid), NID_GET_Y_POS(nid));
-    for( i=0; i<3; i++ ){
+    for( i=2; i<3; i++ ){
 	float k = s->camera.k[i];
 	float m = s->camera.m[i];
 	int side = s->camera.side[i];

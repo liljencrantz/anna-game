@@ -10,8 +10,14 @@
 #define RENDER_PASS_TRANSPARENT 1
 #define RENDER_PASS_COUNT 2
 
-typedef void(*render_function_t)(scene_t *s);
+typedef struct
+{
+    float view_direction[3];
+}
+    render_state_t;
 
+typedef void(*render_function_t)(scene_t *s);
+//typedef void(*render_element_t)(void *element, scene_t *scene, render_state_t *state)
 
 void render_init();
 

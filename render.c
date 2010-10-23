@@ -22,7 +22,11 @@ void render_init()
     glShadeModel(GL_SMOOTH);
     glMatrixMode(GL_PROJECTION);
     
-    gluPerspective(60.0f*4/3,(float)4/(float)3,1.0f,3000.0f);	// Calculate The Aspect Ratio Of The Window
+    gluPerspective(
+	90.0*4/3,
+	4.0/3.0,
+	1.0f,
+	3000.0f);	// Calculate The Aspect Ratio Of The Window
     
     glMatrixMode(GL_MODELVIEW);
     
@@ -50,16 +54,16 @@ void render_register(render_function_t f, int pass)
 static void calc_pov( scene_t *s )
 {
 	int i;
-	GLfloat angle_1=s->camera.lr_rot+40;
-	GLfloat angle_2=s->camera.lr_rot-40;
+	GLfloat angle_1=s->camera.lr_rot+85;
+	GLfloat angle_2=s->camera.lr_rot-85;
 	GLfloat angle_3=s->camera.lr_rot+90;
 	GLfloat plane[3][3];
 	
 	GLfloat mpos[3];
 //	printf("%.2f\n", s->camera.lr_rot);
 	
-	mpos[0] = s->camera.pos[0] - 1.0*cos(s->camera.lr_rot*M_PI/180.0f )*10.0;
-	mpos[1] = s->camera.pos[1] - 1.0*sin(s->camera.lr_rot*M_PI/180.0f )*10.0;
+	mpos[0] = s->camera.pos[0] - 1.0*cos(s->camera.lr_rot*M_PI/180.0f )*15.0;
+	mpos[1] = s->camera.pos[1] - 1.0*sin(s->camera.lr_rot*M_PI/180.0f )*15.0;
 	mpos[2] = s->camera.pos[2];
 	
 	plane[0][0]=mpos[0] + cos( angle_1*M_PI/180.0f );
@@ -118,9 +122,8 @@ static void render_setup_camera(scene_t *s)
 	    glRotatef( -90.0f, 1.0f, 0.0f, 0.0f );
 	    glRotatef( s->camera.ud_rot, 1.0f, 0.0f, 0.0f );
 	    //glRotatef( s->camera.s_rot, 0.0f, 1.0f, 0.0f );
-	    glRotatef( -s->camera.lr_rot+90, 0.0f, 0.0f, 1.0f );
-	    
-	    glTranslatef( -s->camera.pos[0], -s->camera.pos[1], -(s->camera.pos[2]) );
+	    glRotatef( -s->camera.lr_rot+90, 0.0f, 0.0f, 1.0f );	    
+	    glTranslatef( -s->camera.pos[0], -s->camera.pos[1], -s->camera.pos[2] );
 /*	    
 	    printf( "LALALA angle %.2f, pos %.2f %.2f\n", 
 		    s->camera.lr_rot,
@@ -145,10 +148,13 @@ void render( scene_t *s )
 	    render_function[i][j](s);    
 	}	
     }
+    
+    render_boids(s);
+    
 }
 
 GLfloat render_height_correct(GLfloat a, GLfloat b)
 {
-    return -0.008*(a*a+b*b);
+    return -0.005*(a*a+b*b);
 }
 

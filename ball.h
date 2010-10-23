@@ -21,8 +21,10 @@ typedef struct
 typedef struct 
 {
     GLfloat pos[3];
+    GLfloat offset[3];
     GLfloat angle1;
     GLfloat angle2;
+    GLfloat angle3;
     GLfloat radius;
     
     ball_type_t *type;

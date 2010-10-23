@@ -47,5 +47,12 @@ heightmap_element_t;
 
 int hid_get_nid_at_level(hid_t hid, nid_t *nid, int level);
 
+static inline hid_t hid(int lvl, int x, int y)
+{
+    hid_t h;
+    h.level=lvl;
+    h.id=x+((2<<h.level)*y);
+    return h;
+}
 
 #endif

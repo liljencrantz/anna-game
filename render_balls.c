@@ -23,7 +23,9 @@ void plain_vertex(
     int idx = ball_idx(level, x, y);
     ball_point_t *p=&b->data[idx];
     
-    glColor4f(fabs(dot_prod(view_dir, ball_normal[idx], 3)),0,0,1);
+    float c = fabs(dot_prod(view_dir, ball_normal[idx], 3));
+
+    glColor3f(c*0.2,c*0.4,c*0.1);
     
     glVertex3f(
 	ball_normal[idx][0]*p->radius,
@@ -52,7 +54,8 @@ static inline void scale_vertex_sub(
     float c2 = fabs(dot_prod(view_dir, ball_normal[idx2], 3));
     float c3 = fabs(dot_prod(view_dir, ball_normal[idx3], 3));
 
-    glColor4f(f1*c1 + ff2*(c2+c3),0,0,1);
+    float c = f1*c1 + ff2*(c2+c3);
+    glColor3f(c*0.2,c*0.4,c*0.1);
     
     glVertex3f(
 	n1[0]*f1*r1 + ff2*(n2[0]*r2+n3[0]*r3),
@@ -81,8 +84,9 @@ void scale_vertex1(
     float c1 = fabs(dot_prod(view_dir, ball_normal[idx1], 3));
     float c2 = fabs(dot_prod(view_dir, ball_normal[idx2], 3));
 
-    glColor4f(f1*c1 + f2*(c2),0,0,1);
-
+    float c = f1*c1 + f2*(c2);
+    glColor3f(c*0.2,c*0.4,c*0.1);
+    
     glVertex3f(
 	n1[0]*f1*r1 + n2[0]*f2*(r2),
 	n1[1]*f1*r1 + n2[1]*f2*(r2),
@@ -152,7 +156,7 @@ void render_ball(scene_t *s, ball_t *t)
     
     for(level=2; level < t->type->levels; level++)
     {
-	error = s->render_quality * t->type->error[level] / (0.0001 + sqrtf(distance_sq));
+	error = t->scale*s->render_quality * t->type->error[level] / (0.0001 + sqrtf(distance_sq))*2;
 //	printf("%.2f\n", error);
 	
 	if(error < 1.0)
@@ -164,9 +168,14 @@ void render_ball(scene_t *s, ball_t *t)
     
     normalize(view_dir, view_dir, 3);
     rotate_z(view_dir, -t->angle1*M_PI/180);
+    rotate_y(view_dir, -t->angle2*M_PI/180);
+//    rotate_x(view_dir, -t->angle3*M_PI/180);
     
     glTranslatef( t->pos[0], t->pos[1], t->pos[2]+corr);
     glRotatef( t->angle1, 0.0f, 0.0f, 1.0f );
+    glRotatef( t->angle2, 0.0f, 1.0f, 0.0f );
+    glRotatef( t->angle3, 1.0f, 0.0f, 0.0f );
+    glTranslatef( t->offset[0], t->offset[1], t->offset[2]);
     glScalef(t->scale, t->scale, t->scale);
     glPointSize(5.0);
     

@@ -59,6 +59,8 @@ void render_section(tree_section_t *sec, GLfloat *view_dir)
 
 void render_tree_leaves(scene_t *s, tree_t *t)
 {
+    return;
+    
     float middle[]={988,843};
     
     float vec[][2]={
@@ -270,7 +272,8 @@ void render_trees_trunk(scene_t *s)
 
 //    glEnable( GL_TEXTURE_2D );
 //    glEnable( GL_ALPHA_TEST );
-    glEnable( GL_BLEND );
+    glDisable( GL_BLEND );
+//    glEnable( GL_BLEND );
 
 //    glDepthMask( GL_FALSE );
     glShadeModel( GL_FLAT );
@@ -309,8 +312,8 @@ void render_trees_init()
 //	printf("%d\n", color_offset[i][2]);
     }
     
-    render_register(render_trees_leaves, RENDER_PASS_SOLID);    
     render_register(render_trees_trunk, RENDER_PASS_SOLID);    
+    render_register(render_trees_leaves, RENDER_PASS_SOLID);    
     
 }
 

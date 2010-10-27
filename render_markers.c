@@ -7,10 +7,8 @@
 #include "scene.h"
 #include "render.h"
 #include "util.h"
-#include "actor.h"
 
-
-void render_actor_bodies( scene_t *s )
+void render_markers( scene_t *s )
 {
 //    glDisable(GL_DEPTH_TEST);
     glColor3f(1.0,0.0,0.0);
@@ -61,8 +59,8 @@ void render_actor_bodies( scene_t *s )
 
 }
 
-void render_actors_init()
+void render_markers_init()
 {
-    render_register(render_actor_bodies, RENDER_PASS_SOLID);    
+    render_register(render_markers, RENDER_PASS_SOLID);    
 }
 

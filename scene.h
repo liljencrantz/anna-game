@@ -10,6 +10,13 @@
 #include "ball.h"
 #include "boid.h"
 
+/**
+   The scene object is rather large, because it contains statically
+   allocated memory used for storing trees, balls, boids, etc. The
+   reason for statically allocating these is to allow adding of simple
+   objects but avoiding memory allocations in the main thread.
+ */
+
 typedef struct
 {
     tile_t *root_tile;
@@ -27,13 +34,13 @@ typedef struct
     float grass_offset;
     
     struct actor *player;
-
+    
     void *lua_state;
     
-    tree_t tree[256];
+    tree_t tree[4096];
     size_t tree_count;
     
-    ball_t ball[1024];
+    ball_t ball[4096];
     size_t ball_count;
     
     boid_set_t *boid_set[16];
@@ -54,6 +61,7 @@ t_node_t *scene_node_get(
     nid_t nid);
 
 float scene_get_height( scene_t *s, float xf, float yf );
+void scene_get_slope( scene_t *s, float xf, float yf, float *slope);
 float scene_get_height_level( scene_t *s, int level, float xf, float yf );
 
 void scene_init(scene_t *s, int lb, float scene_size);
@@ -129,7 +137,6 @@ static inline void scene_ball_destroy(
     s->ball[tid] = s->ball[--s->ball_count];
 }
 
-
 static inline ball_t *scene_ball_get(scene_t *s, size_t idx)
 {
     return &s->ball[idx];
@@ -160,8 +167,6 @@ static inline int scene_ball_create(
 }
 
 
-
-
 static inline void scene_boid_set_destroy(
     scene_t *s, 
     int tid)
@@ -190,7 +195,6 @@ static inline int scene_boid_set_create(
     s->boid_set[s->boid_set_count] = boid_set_init(count, x, y);
     return s->boid_set_count++;
 }
-
 
 #endif
 

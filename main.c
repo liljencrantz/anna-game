@@ -23,9 +23,9 @@ void init()
     if(0)
 	screen_init(1440, 900, 1);
     else
-	screen_init(800, 600, 0);
+	screen_init(960, 600, 0);
 
-    render_init();
+    render_init();    
     anna_lua_init();
 }
 

@@ -25,7 +25,7 @@ void tile_calc(scene_t *s, int level_count);
 
 static float florp()
 {
-    return 0.06*(((2.0*rand())/RAND_MAX)-1.0);
+    return 0.09*(((2.0*rand())/RAND_MAX)-1.0);
 }
 
 
@@ -420,7 +420,7 @@ static int lua_scene_create (lua_State *L)
     load_temp_tile_data(res);
     
 //    camera_move(res);    
-    res->camera.lr_rot=79;
+    res->camera.lr_rot=0;
     res->camera.ud_rot = 65;
 
     return 1;
@@ -447,6 +447,21 @@ static int lua_scene_get_height(lua_State *L)
     lua_pushnumber(L, scene_get_height(s, x, y));    
         
     return 1;
+}
+
+static int lua_scene_get_slope(lua_State *L)
+{
+    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    
+    float x = luaL_checknumber(L, 2);
+    float y = luaL_checknumber(L, 3);
+    float res[2];
+    
+    scene_get_slope(s, x, y, res);    
+    lua_pushnumber(L, res[0]);
+    lua_pushnumber(L, res[1]);
+    
+    return 2;
 }
 
 static int lua_scene_get_real_time(lua_State *L)
@@ -534,6 +549,7 @@ void register_types(
 	{"create", lua_scene_create},
 	{"render", lua_scene_render},
 	{"getHeight", lua_scene_get_height},
+	{"getSlope", lua_scene_get_slope},
 	{0,0}
     };
 

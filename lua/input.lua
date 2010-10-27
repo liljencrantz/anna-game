@@ -19,11 +19,13 @@ function handle(scene)
       scene.active=false
    end
    if f(48) then
-      scene.renderQuality = scene.renderQuality + 0.3
+      scene.renderQuality = scene.renderQuality *1.003
+      print(scene.renderQuality)
    end
 
    if f(57) then
-      scene.renderQuality = scene.renderQuality - 0.3
+      scene.renderQuality = scene.renderQuality /1.003
+      print(scene.renderQuality)
    end
 
    p.actions.walk_forward = f(ARROW_UP)

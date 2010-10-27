@@ -31,6 +31,7 @@ Scene = wrapper.make(
       peer_methods = {
 	 render=0,
 	 getHeight=0,
+	 getSlope=0,
 	 getRealTime=0
       },
 
@@ -88,6 +89,7 @@ function Scene:step(dt)
       self.cameraAngle = ca
    end
    --self.cameraAngle = self.player.angle
+   --self.cameraAngle = 0
    
    local tpos = self.player.pos
    tpos[1] = tpos[1] - CAMERA_DISTANCE * math.cos(self.cameraAngle*math.pi/180)

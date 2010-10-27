@@ -69,11 +69,6 @@ void add_section(
 
 	for(int i=0; i<3; i++)
 	{
-	    printf(
-		"%.2f %.2f\n", 
-		s->pos[i]+s->normal[i]*s->length,
-		p->pos[i]);
-	    
 	    assert(fabs(s->pos[i]+s->normal[i]*s->length - p->pos[i])< 0.01);
 	    
 	}

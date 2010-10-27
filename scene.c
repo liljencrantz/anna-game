@@ -25,7 +25,7 @@ void scene_init( scene_t *s, int lb, float scene_size )
     s->sun_light = 1.0;
 
     s->scene_size = scene_size;
-    s->render_quality=70.0;
+    s->render_quality=60.0;
 }
 
 float scene_hid_x_coord(scene_t *s, hid_t hid)
@@ -42,9 +42,59 @@ float scene_hid_y_coord(scene_t *s, hid_t hid)
     return (s->scene_size * idx) / max;
 }
 
+static void scene_get_slope_level( scene_t *s, int level, float xf, float yf, float *slope )
+{
+    int points_at_level = (2 << level);
+    float scaled_x = xf*points_at_level/s->scene_size;
+    float scaled_y = yf*points_at_level/s->scene_size;
+    int base_x = (int)floor(scaled_x);
+    int base_y = (int)floor(scaled_y);
+
+    hid_t hid;
+    int y_inc = (base_y < (points_at_level-2));
+    int x_inc = (base_x < (points_at_level-2));
+    float w_inv = points_at_level/s->scene_size;
+    
+    if((base_x >= points_at_level-1) ||
+       (base_y >= points_at_level-1) ||
+       !x_inc ||
+       !y_inc)
+    {
+	slope[0]=0;
+	slope[1]=0;
+	return;
+    }
+        
+    HID_SET(hid, level, base_x, base_y);
+    float h1 = scene_hid_lookup(s, hid)->height;
+    /*
+    printf(
+	"LALA2 %.2f %.2f\n",
+	(1.0-f1)*(1.0-f2)*scene_hid_lookup(s, hid)->height,
+	height);
+*/  
+    //return scene_hid_lookup(s, hid)->height;
+    
+    HID_SET(hid, level, base_x+1, base_y);
+    float h2 = scene_hid_lookup(s, hid)->height;
+    
+    HID_SET(hid, level, base_x, base_y+1);
+    
+    float h3 = scene_hid_lookup(s, hid)->height;
+    
+    slope[0] = (h2-h1)*w_inv;
+    slope[1] = (h3-h1)*w_inv;
+}
+
+
 float scene_get_height( scene_t *s, float xf, float yf )
 {
     return scene_get_height_level(s, s->level_base-1, xf, yf);    
+}
+
+void scene_get_slope( scene_t *s, float xf, float yf, float *slope )
+{
+    scene_get_slope_level(s, s->level_base-1, xf, yf, slope);
 }
 
 float scene_get_height_level( scene_t *s, int level, float xf, float yf )

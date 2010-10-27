@@ -58,27 +58,29 @@ function run()
    sc.player = actor.Actor.create(sc, "Bosse");
    sc.camera = {100, 100, 10}
 
-   BoidSetPeer.create(sc.__peer, 20, 40, 40);
+   BoidSetPeer.create(sc.__peer, 40, 40, 40);
    bid = BallPeer.create(sc.__peer, "ball1", 2)
    bid:setLocation(
       sc.__peer, 
       42,42,3,
       40,0,0)
-      
-   for i = 11, 130, 10 do
-      for j = 11, 130, 10 do
-	 if false then
-	    bid = BallPeer.create(sc.__peer, "ball1", 2)
+   for i = 11, 200, 4 do
+      for j = 11, 200, 4 do
+	 if true then
+	    local x = i+5*math.sin(0.1*j)
+	    local y = j+5*math.sin(0.1*i)
+	    bid = BallPeer.create(sc.__peer, "ball1", 1.5)
 	    bid:setLocation(
 	       sc.__peer, 
-	       i+5*math.sin(0.1*j), j+5*math.sin(0.1*i),3,
+	       x,y,
+	       sc:getHeight(x,y)+3.5,
 	       40,0,0)
-	    else
+--	    else
 	       TreePeer.create(sc.__peer, "tree1", i+5*math.sin(0.1*j), j+5*math.sin(0.1*i), (i*10+j*13)%360, 1);
 	    end
       end
    end
-   
+
    local lastTime = sc:getRealTime()
    local framerate = 30
    i=1

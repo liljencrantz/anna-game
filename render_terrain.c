@@ -18,6 +18,7 @@
 
 typedef struct
 {
+    GLfloat direction[3];
     GLfloat vertex[3];
     GLfloat normal[3];
     GLfloat shade;
@@ -52,7 +53,7 @@ static GLfloat node_norm_factor(nid_t nid, scene_t *s, GLfloat *pos)
 */
 
 
-static void render_prepare_node(scene_t *s, nid_t nid)
+static void render_prepare_node(scene_t *s, nid_t nid, float parent_level)
 {
     t_node_t *n = scene_nid_lookup(s, nid);
     nid_t child_id[4];
@@ -72,15 +73,16 @@ static void render_prepare_node(scene_t *s, nid_t nid)
 	
 	if(error < 1.0)
 	{
-	    n->scale = maxf(0.00001, minf(1.0, (1.0/error-1.0)*5.0));
+	    n->scale = parent_level;
 	}
 	else
 	{
+	    float my_level = error;//maxf(0.00001, minf(1.0, (1.0/error-1.0)*5.0));
 	    n->scale = 0.0;
 	    nid_get_children(nid, child_id);
 	    for(i=0; i<4; i++)
 	    {
-		render_prepare_node(s, child_id[i]);
+		render_prepare_node(s, child_id[i], my_level);
 	    }
 	}	    
     }
@@ -90,24 +92,8 @@ static void render_prepare_node(scene_t *s, nid_t nid)
     }
 }
 
-
-static void vertex_shade( render_element_t *el, float *pos)
+static void vertex_perspective( scene_t *s, render_element_t *el, float *pos)
 {
-    
-//    printf("Vertex %.2f %.2f %.2f \n", vertex[0], vertex[1], vertex[2]);
-    GLfloat direction[3];
-    subtract(el->vertex, pos, direction, 3);
-    direction[2] -= 2.0*render_height_correct(direction[0], direction[1]);
-    
-    normalize(direction, direction, 3);
-    GLfloat l = 0.4 + 0.6*fabs(dot_prod(direction, el->normal, 3));
-    el->shade = l;
-}
-
-static void vertex_perspective( render_element_t *el, float *pos)
-{
-    vertex_shade(el, pos);
-    
     float a = el->vertex[0]-pos[0];
     float b = el->vertex[1]-pos[1];
     if (DRAW)
@@ -120,20 +106,118 @@ static void vertex_perspective( render_element_t *el, float *pos)
 }
 
 
+static void vertex_perspective_l( scene_t *s, render_element_t *el, float *pos)
+{
+    float a = el->vertex[0]-pos[0];
+    float b = el->vertex[1]-pos[1];
+    if (DRAW)
+    {
+	glColor3ub( 0,0,0);
+//	printf( "%f %f %f\n", el->color[0]*el->shade, el->color[1]*el->shade, el->color[2]*el->shade);    
+	glVertex3f( el->vertex[0], el->vertex[1], el->vertex[2]+render_height_correct(a,b)+0.01);
+//	printf("%f %f %f\n", el->vertex[0], el->vertex[1], el->vertex[2]+render_height_correct(a,b));
+    }
+}
+
+
 #define MIDDLE_ELEMENT 8
 
-static void interpolate(scene_t *s, hid_t main_hid, GLfloat scale, render_element_t *dest)
+
+static void interpolate_corner(
+    scene_t *s,
+    nid_t nid,
+    hid_t *hid_arr, 
+    t_node_t *node, 
+    t_node_t **node_arr, 
+    render_element_t *dest_arr, 
+    heightmap_element_t **el_arr, 
+    int idx)
 {
-    heightmap_element_t *el = scene_hid_lookup(s, main_hid);
+    heightmap_element_t *el = el_arr[idx];
+    render_element_t *dest = &dest_arr[idx];
+    hid_t main_hid = hid_arr[idx];
+    
+    if(node_arr[idx]->scale < 1.2)
+    {
+	float f = (node_arr[idx]->scale - 1.0) * 5;
+	
+	assert(f>=0);
+	assert(f<=1);
 
-    dest->vertex[0] = scene_hid_x_coord(s, main_hid);
-    dest->vertex[1] = scene_hid_y_coord(s, main_hid);
-    dest->vertex[2] = el->height;
-    dest->color[0] = el->color[0];
-    dest->color[1] = el->color[1];
-    dest->color[2] = el->color[2];
+	if((HID_GET_X_POS(main_hid) & 1) ||
+	   (HID_GET_Y_POS(main_hid) & 1)
+	    )
+	{
 
-    memcpy(dest->normal, el->normal, sizeof(GLfloat)*3);	
+	    heightmap_element_t *el1;
+	    heightmap_element_t *el2;
+
+	    if((HID_GET_X_POS(main_hid) & 1) &&
+	       (HID_GET_Y_POS(main_hid) & 1))
+		{
+		    if((NID_GET_X_POS(nid)+NID_GET_Y_POS(nid))&1)
+		    {
+			el1 = el_arr[3];
+			el2 = el_arr[7];	   
+		    }
+		    else
+		    {
+			el1 = el_arr[1];
+			el2 = el_arr[5];			
+		    }
+		    
+		}
+	       else
+	       {
+		   el1 = el_arr[(idx+1)%8];
+		   el2 = el_arr[(idx+7)%8];	   
+	       }
+	       
+	    dest->vertex[0] = scene_hid_x_coord(s, main_hid);
+	    dest->vertex[1] = scene_hid_y_coord(s, main_hid);
+	    dest->vertex[2] = el->height*f + 0.5*(el1->height+el2->height)*(1.0-f);
+
+	    dest->color[0] = el->color[0]*f + 0.5*(el1->color[0]+el2->color[0])*(1.0-f);
+	    dest->color[1] = el->color[1]*f + 0.5*(el1->color[1]+el2->color[1])*(1.0-f);
+	    dest->color[2] = el->color[2]*f + 0.5*(el1->color[2]+el2->color[2])*(1.0-f);
+	    
+	    dest->normal[0] = el->normal[0]*f + 0.5*(el1->normal[0]+el2->normal[0])*(1.0-f);
+	    dest->normal[1] = el->normal[1]*f + 0.5*(el1->normal[1]+el2->normal[1])*(1.0-f);
+	    dest->normal[2] = el->normal[2]*f + 0.5*(el1->normal[2]+el2->normal[2])*(1.0-f);	    
+	}
+	else 
+	{
+	    hid_t parent_hid;
+	    HID_SET(
+		parent_hid,
+		HID_GET_LEVEL(main_hid)-1, 
+		HID_GET_X_POS(main_hid)/2,
+		HID_GET_Y_POS(main_hid)/2);
+	    heightmap_element_t *parent_el = scene_hid_lookup(s, parent_hid);
+	    dest->vertex[0] = scene_hid_x_coord(s, main_hid);
+	    dest->vertex[1] = scene_hid_y_coord(s, main_hid);
+	    dest->vertex[2] = el->height*f + parent_el->height*(1.0-f);
+	    dest->color[0] = el->color[0]*f + parent_el->color[0]*(1.0-f);
+	    dest->color[1] = el->color[1]*f + parent_el->color[1]*(1.0-f);
+	    dest->color[2] = el->color[2]*f + parent_el->color[2]*(1.0-f);
+	    
+	    dest->normal[0] = el->normal[0]*f + parent_el->normal[0]*(1.0-f);
+	    dest->normal[1] = el->normal[1]*f + parent_el->normal[1]*(1.0-f);
+	    dest->normal[2] = el->normal[2]*f + parent_el->normal[2]*(1.0-f);
+	}
+	
+    }
+    else
+    {
+	dest->vertex[0] = scene_hid_x_coord(s, main_hid);
+	dest->vertex[1] = scene_hid_y_coord(s, main_hid);
+	dest->vertex[2] = el->height;
+	dest->color[0] = el->color[0];
+	dest->color[1] = el->color[1];
+	dest->color[2] = el->color[2];
+	memcpy(dest->normal, el->normal, sizeof(GLfloat)*3);	
+    }
+    
     dest->use=1;
     
 }
@@ -161,7 +245,7 @@ static void max_used(
 //	    printf("Ok, checking node (%d %d %d), number %d of %d matches at current level.\n", NID_GET_LEVEL(nid[j]), NID_GET_X_POS(nid[j]), NID_GET_Y_POS(nid[j]), j+1, nid_count);
 	    
 	    t_node_t *tmp = scene_nid_lookup(s, nid[j]);
-	    if( tmp->scale > 0.0 && (!*n || tmp->scale > (*n)->scale))
+	    if( tmp->scale > 0.0 && (!*n || tmp->scale < (*n)->scale))
 	    {
 		*n = tmp;
 		done=1;
@@ -179,50 +263,70 @@ static void max_used(
     }
 }
 
-static void render_calculate_elements(
+static inline void render_calculate_elements(
     scene_t *s, 
     nid_t nid,
-    float scale,
+    t_node_t *node,
     render_element_t *element)
 {
     hid_t hid[9];
-    nid_get_hid(nid, hid);
-    int i;
+    hid_t hid_max_arr[9];
+    heightmap_element_t *el_arr[9];
+    t_node_t *node_arr[9];
+    int level_arr[9];
     
-    for(i=1;i<9;i+=2)
+    nid_get_hid(nid, hid);
+    int i, j;
+    for(i=0; i<=MIDDLE_ELEMENT; i++)
+    {
+	max_used(s, hid[i], &level_arr[i], &hid_max_arr[i], &node_arr[i]);
+	el_arr[i] = scene_hid_lookup(s, hid_max_arr[i]);
+    }
+    
+    
+    for(i=1;i<MIDDLE_ELEMENT;i+=2)
     {
 	//printf("Lookup he %d %d %d\n", HID_GET_LEVEL(hid[i]), HID_GET_X_POS(hid[i]), HID_GET_Y_POS(hid[i]));
+	interpolate_corner(s, nid, hid_max_arr, node, node_arr, element, el_arr, i);
+
+	subtract(element[i].vertex, s->camera.pos, element[i].direction, 3);
+	element[i].direction[2] -= 2.0*render_height_correct(element[i].direction[0], element[i].direction[1]);
 	
-	hid_t el;
-	t_node_t *n;
-	int level;
-	max_used(s, hid[i], &level, &el, &n);
-	interpolate(s, el, n->scale, &element[i]);
+	normalize(element[i].direction, element[i].direction, 3);
     }
-    for(i=0; i<10; i+=2)
+    for(i=0; i<MIDDLE_ELEMENT; i+=2)
     {
 	element[i].use=0;
-	hid_t el;
-	t_node_t *n;
-	int level;	
-	max_used(s, hid[i], &level, &el, &n);
-	if(level == NID_GET_LEVEL(nid))
+	for(j=0; j<3;j++)
 	{
-	    interpolate(s, el, n->scale, &element[i]);
+	    element[i].direction[j] = (element[(i+1)%8].direction[j]+element[(i+7)%8].direction[j])*0.5;
+	}
+	
+	if(level_arr[i] == NID_GET_LEVEL(nid))
+	{
+	    interpolate_corner(s, nid, hid_max_arr, node, node_arr, element, el_arr, i);
 	}
 	else
 	{
 	    element[i].vertex[2] = 0.5 * (element[(i+7)%8].vertex[2] + element[i+1].vertex[2]);	    
 	    element[i].shade = 0.5 * (element[(i+7)%8].shade + element[i+1].shade);		    element[i].normal[0] = 0.5 * (element[(i+7)%8].normal[0] + element[i+1].normal[0]);	    
 	    element[i].normal[1] = 0.5 * (element[(i+7)%8].normal[1] + element[i+1].normal[1]);	    
-	    element[i].normal[2] = 0.5 * (element[(i+7)%8].normal[2] + element[i+1].normal[2]);	    
-    
+	    element[i].normal[2] = 0.5 * (element[(i+7)%8].normal[2] + element[i+1].normal[2]);
 	}
-	
     }
-    
-    interpolate(s, hid[MIDDLE_ELEMENT], 1.0, &element[MIDDLE_ELEMENT]);
-    
+
+    for(j=0; j<3;j++)
+    {
+	element[MIDDLE_ELEMENT].direction[j] = (element[1].direction[j]+element[5].direction[j])*0.5;
+    }
+    interpolate_corner(s, nid, hid_max_arr, node, node_arr, element, el_arr, MIDDLE_ELEMENT);
+
+    for(i=0; i<= MIDDLE_ELEMENT; i++)
+    {
+	float l = fabs(dot_prod(element[i].direction, element[i].normal, 3));
+	l = s->ambient_light + l*(s->sun_light-s->ambient_light);	
+	element[i].shade = l;	
+    }
 }
 
 
@@ -232,6 +336,8 @@ static void render_node(scene_t *s, nid_t nid)
     render_element_t render_element[10];
     nid_t child_id[4];
     int i;
+    
+//    glDisable(GL_DEPTH_TEST);
 
     if(!n || n->scale < 0.0)
     {
@@ -259,31 +365,67 @@ static void render_node(scene_t *s, nid_t nid)
 	    return;
 	}
 	
-	render_calculate_elements( s, nid, n->scale, render_element);
-	
-	glBegin( GL_TRIANGLE_FAN );
-	
-	//glColor3f( 0.0, 0.0, 0.4);//0.1*nid.level );
-	vertex_perspective( &render_element[MIDDLE_ELEMENT], s->camera.pos );
-	vertex_perspective( &render_element[7], s->camera.pos );
+	render_calculate_elements( s, nid, n, render_element);
+
+	glBegin( GL_TRIANGLE_FAN );	
+	vertex_perspective( s, &render_element[MIDDLE_ELEMENT], s->camera.pos );
+	vertex_perspective( s, &render_element[7], s->camera.pos );
 
 	for( i=0; i<4; i++ )
 	{
 	    if( render_element[2*i].use )
 	    {
-		vertex_perspective( &render_element[2*i], s->camera.pos );
+		vertex_perspective( s, &render_element[2*i], s->camera.pos );
 	    }
-	    else
-	    {
-		vertex_shade( &render_element[2*i], s->camera.pos );
-	    }
-	    vertex_perspective( &render_element[2*i+1], s->camera.pos );
+	    vertex_perspective( s, &render_element[2*i+1], s->camera.pos );
 	    
 	}
 	glEnd();
+	/*
+	glBegin( GL_LINE_STRIP );	
+	vertex_perspective_l( s, &render_element[1], s->camera.pos );
+	if(render_element[2].use)
+	    vertex_perspective_l( s, &render_element[2], s->camera.pos );
+	vertex_perspective_l( s, &render_element[3], s->camera.pos );
+	if(render_element[4].use)
+	    vertex_perspective_l( s, &render_element[4], s->camera.pos );
+	vertex_perspective_l( s, &render_element[5], s->camera.pos );
+	if(render_element[6].use)
+	    vertex_perspective_l( s, &render_element[6], s->camera.pos );
+	vertex_perspective_l( s, &render_element[7], s->camera.pos );
+	if(render_element[0].use)
+	    vertex_perspective_l( s, &render_element[0], s->camera.pos );
+	vertex_perspective_l( s, &render_element[1], s->camera.pos );
+	glEnd();
+	glBegin( GL_LINE_STRIP );
+	if(render_element[0].use)
+	    vertex_perspective_l( s, &render_element[0], s->camera.pos );
+	vertex_perspective_l( s, &render_element[8], s->camera.pos );
+	if(render_element[4].use)
+	    vertex_perspective_l( s, &render_element[4], s->camera.pos );
+	glEnd();
+	glBegin( GL_LINE_STRIP );
+	if(render_element[2].use)
+	    vertex_perspective_l( s, &render_element[2], s->camera.pos );
+	vertex_perspective_l( s, &render_element[8], s->camera.pos );
+	if(render_element[6].use)
+	    vertex_perspective_l( s, &render_element[6], s->camera.pos );
+	glEnd();
+	glBegin( GL_LINE_STRIP );
+	vertex_perspective_l( s, &render_element[1], s->camera.pos );
+	vertex_perspective_l( s, &render_element[8], s->camera.pos );
+	vertex_perspective_l( s, &render_element[5], s->camera.pos );
+	glEnd();
+	glBegin( GL_LINE_STRIP );
+	vertex_perspective_l( s, &render_element[7], s->camera.pos );
+	vertex_perspective_l( s, &render_element[8], s->camera.pos );
+	vertex_perspective_l( s, &render_element[3], s->camera.pos );
+	glEnd();
 
-#define SHADE_MAX 0.6
-	if(n->distance < GRASS_MAX_DISTANCE)
+
+	*/
+#define SHADE_MAX 0.8
+	if(0 &&n->distance < GRASS_MAX_DISTANCE)
 	{
 	    
 	    if(render_element[1].shade < SHADE_MAX ||
@@ -470,7 +612,7 @@ void render_terrain( scene_t *s )
 {
     s->grass_offset=(0.5+0.5*cos(s->time*0.1))*sin(s->time*GRASS_WIND_FREQUENCY)*GRASS_WIND_AMPLITUDE;
     nid_t root = node_get_root();
-    render_prepare_node(s, root);
+    render_prepare_node(s, root, 0.0);
     glEnable( GL_CULL_FACE );	
     render_node(s, root);    
     glDisable( GL_CULL_FACE );

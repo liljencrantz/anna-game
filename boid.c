@@ -26,16 +26,19 @@ static inline int boid_dst_sq(boid_set_t *b, int i, int j)
 
 void boid_calc(boid_set_t *b, int idx, float *v1, float *v2, float *v3)
 {
-    int i;
+    int off, i;
     int friends=0;
 	
-    for(i=0; i<b->count; i++)
+    for(i=0;i<b->count; i++)
     {
+//	printf("tralala %d\n", i);
+	
 	float dst_sq = boid_dst_sq(b, idx, i);
 	
 	if(dst_sq < (BOID_MAX_DISTANCE*BOID_MAX_DISTANCE))
 	{
 	    friends++;
+	    
 	    v1[0] += (b->data[i].pos[0] - b->data[idx].pos[0]);
 	    v1[1] += (b->data[i].pos[1] - b->data[idx].pos[1]);
 	    v1[2] += (b->data[i].pos[2] - b->data[idx].pos[2]);	    
@@ -55,6 +58,7 @@ void boid_calc(boid_set_t *b, int idx, float *v1, float *v2, float *v3)
 
 	}
     }
+    b->idx = (b->idx+off)%b->count;
     
     if(friends == 0)
 	return;
@@ -82,10 +86,11 @@ void boid_calc(boid_set_t *b, int idx, float *v1, float *v2, float *v3)
 
 void boid_step(boid_set_t *b, float dt)
 {
-    int i,j;
+    int i,j, from, to;
     
     for(i=0;i<b->count; i++)
     {
+	
 	float v1[3]={0,0,0};
 	float v2[3]={0,0,0};
 	float v3[3]={0,0,0};
@@ -106,6 +111,7 @@ void boid_step(boid_set_t *b, float dt)
 	    b->data[i].pos[j] += b->data[i].vel[j]*dt;
 	}
     }
+
 }
 
 boid_set_t *boid_set_init(int count, float x, float y)
@@ -119,7 +125,8 @@ boid_set_t *boid_set_init(int count, float x, float y)
 	b->data[i].pos[1] = y + (i/10);
 	b->data[i].pos[2] = 3;
     }
-    b->speed = 15;
+    b->speed = 20;
+    b->idx=0;
     
     return b;
     

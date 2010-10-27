@@ -133,14 +133,25 @@ function Actor:step(dt)
    
    local vel = self.vel
    local velFactor = self.reactionSpeed*dt
+
+   local slope_x, slope_y = self.scene:getSlope(self.pos[1], self.pos[2])
+   local slope = {slope_x, slope_y}
+--   local slope = util.pack(self.scene:getSlope(self.pos[1], self.pos[2]))
+   local dir={math.cos(self.angle*math.pi/180), math.sin(self.angle*math.pi/180)}
+
+   local mySlope = util.dot(slope, dir)
+	      
+   local slopeFactor = 1/(1+1.5*mySlope*mySlope + 0.5*mySlope)
+--   print(string.format("Slope is %.2f, slopeFactor is %.2f\n", mySlope, slopeFactor));
+
    if self.actions.walk_forward then
       local vt = {
 	 math.cos(self.angle*math.pi/180)*self.walkSpeed,
 	 math.sin(self.angle*math.pi/180)*self.walkSpeed
       }
 
-      vel[1] = vel[1]*(1.0-velFactor) + vt[1]*velFactor
-      vel[2] = vel[2]*(1.0-velFactor) + vt[2]*velFactor
+      vel[1] = vel[1]*(1.0-velFactor) + vt[1]*velFactor*slopeFactor
+      vel[2] = vel[2]*(1.0-velFactor) + vt[2]*velFactor*slopeFactor
      
       self:setMovementAnimation("run")
    elseif self.actions.walk_backward then
@@ -149,8 +160,8 @@ function Actor:step(dt)
 	 -math.sin(self.angle*math.pi/180)*self.walkSpeedReverse
       }
 
-      vel[1] = vel[1]*(1.0-velFactor) + vt[1]*velFactor
-      vel[2] = vel[2]*(1.0-velFactor) + vt[2]*velFactor
+      vel[1] = vel[1]*(1.0-velFactor) + vt[1]*velFactor*slopeFactor
+      vel[2] = vel[2]*(1.0-velFactor) + vt[2]*velFactor*slopeFactor
    else
       vel[1] = (1.0-velFactor)*vel[1]
       vel[2] = (1.0-velFactor)*vel[2]
@@ -161,6 +172,10 @@ function Actor:step(dt)
    pos[1] = pos[1]+vel[1]*dt
    pos[2] = pos[2]+vel[2]*dt
    pos[3] = self.scene:getHeight(pos[1], pos[2])
+
+   pos[1] = math.min(math.max(pos[1], 30), self.scene.size-30)
+   pos[2] = math.min(math.max(pos[2], 30), self.scene.size-30)
+
    self.pos = pos
    
    self:stepAllAnimations(dt)

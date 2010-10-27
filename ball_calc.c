@@ -95,7 +95,8 @@ void ball_calc_lod(ball_type_t *b)
     for( i=b->levels-1; i>=0; i-- )
     {
 	int nw = 1<<i;
-	for( j=0; j<nw; j++ )
+	int nw2 = 2<<i;
+	for( j=0; j<nw2; j++ )
 	{
 	    for( k=0; k<nw; k++ )
 	    {		
@@ -145,10 +146,14 @@ static void ball_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat 
 }
 */
 
-static float height_factor(int lvl, float f)
+static float height_factor(int lvl, float fx, float fy)
 {
-    float angle = 2*M_PI / (1<<lvl);
-    return cos(angle * f);
+    float f = 0.5 - sqrt(pow(0.5-fx,2) + pow(0.5-fy,2)) / sqrt(2);
+    
+    int n = 2 << lvl;
+    float alpha = 2.0 * M_PI/n;
+    float h = cos(alpha);
+    return 1*(1.0-f) + f*h;
 }
 
 
@@ -172,7 +177,7 @@ static void ball_calc_node_distortion(ball_type_t *b)
 
     for(i=0; i< (1<<b->levels); i++)
     {
-	for(j=0; j< (1<<b->levels); j++)
+	for(j=0; j< (1<<(b->levels-1)); j++)
 	{
 	    GLfloat org_height = b->data[ball_idx(b->levels-1, i, j)].radius;
 	    for(lvl=b->levels-2; lvl >=0; lvl--)
@@ -187,6 +192,10 @@ static void ball_calc_node_distortion(ball_type_t *b)
 		float f1y = ((float)(j - (y_trunc << ldiff)) / (1<<ldiff));
 		float f2y = 1.0-f1y;
 
+		int max_x = 2<<lvl;
+		int max_y = 1<<lvl;
+		
+
 //		printf("%d %d %d %.2f\n", j, lvl, y_trunc, f1y);
 		
 		assert(f1x>=0);
@@ -197,15 +206,17 @@ static void ball_calc_node_distortion(ball_type_t *b)
 		GLfloat approx_height = 
 		    b->data[ball_idx(lvl, x_trunc, y_trunc)].radius*f1x*f1y;
 		approx_height += 
-		    b->data[ball_idx(lvl, x_trunc+1, y_trunc)].radius*f2x*f1y;
+		    b->data[ball_idx(lvl, (x_trunc+1)%(max_x), y_trunc)].radius*f2x*f1y;
 		approx_height += 
-		    b->data[ball_idx(lvl, x_trunc, y_trunc+1)].radius*f1x*f2y;
+		    b->data[ball_idx(lvl, x_trunc, (y_trunc+1)%max_y)].radius*f1x*f2y;
 		approx_height += 
-		    b->data[ball_idx(lvl, x_trunc+1, y_trunc+1)].radius*f2x*f2y;
-		approx_height = 
-		    b->data[ball_idx(lvl, x_trunc, y_trunc)].radius;
+		    b->data[ball_idx(lvl, (x_trunc+1)%max_x, (y_trunc+1)%max_y)].radius*f2x*f2y;
+//		approx_height = 
+//		    b->data[ball_idx(lvl, x_trunc, y_trunc)].radius;
 
-		approx_height *= height_factor(lvl, minf(f1x,f2x)+minf(f1y,f2y));
+
+//		approx_height = height_factor(lvl, f1x, f1y)*org_height;
+		approx_height *= height_factor(lvl, f1x, f1y);
 /*
 
 		if(fabs(approx_height-org_height) > 2.01 && lvl>=4)
@@ -215,18 +226,23 @@ static void ball_calc_node_distortion(ball_type_t *b)
 			lvl, i, x_trunc, j, y_trunc, org_height, approx_height);
 		}
 */		
+//		b->error[lvl] = maxf(b->error[lvl], fabs(approx_height-org_height));//pow(fabs(approx_height-org_height),2);
 		b->error[lvl] += pow(fabs(approx_height-org_height),2);
 		count[lvl]++;
 	    }
 	}
     }
 
+    for(i=b->levels-2; i>=0; i--)
+    {
+	b->error[i]= maxf(b->error[i], b->error[i+1]*1.4);
+    }
     for(i=0; i<b->levels-1; i++)
     {
 	b->error[i]/= count[i];
-	b->error[i]= sqrt(b->error[i]);
+	b->error[i]= pow(b->error[i], 1.0/2.0);
 
-	printf("Level %d, error %.2f\n", i, b->error[i]);
+	printf("Level %d, error %.3f\n", i, b->error[i]);
     }
 
 }
@@ -267,6 +283,6 @@ static void ball_calc_normal_hid(scene_t *s, hid_t hid)
 
 void ball_calc(ball_type_t *b)
 {
-      ball_calc_lod(b);
-      ball_calc_node_distortion(b);
+    ball_calc_lod(b);
+    ball_calc_node_distortion(b);
 }

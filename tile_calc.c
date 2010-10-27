@@ -253,6 +253,24 @@ static void tile_calc_normal_hid(scene_t *s, hid_t hid)
 static void tile_calc_normal(scene_t *s, int level_count)
 {
     int i, j, k;
+/*
+    for( i=level_count-1; i>=0; i-- )
+    {
+	int nw = 2<<i;
+	for( j=0; j<nw; j++ )
+	{
+	    for( k=0; k<nw; k++ )
+	    {		
+		hid_t hid;
+		HID_SET(hid, i, j, k);
+		heightmap_element_t *he = scene_hid_lookup(s, hid);
+		he->height = level_count-i;
+		he->color[1] = i*255/level_count;
+		
+	    }
+	}
+    }
+*/
     for( i=level_count-1; i>=0; i-- )
     {
 	int nw = 2<<i;
@@ -279,4 +297,5 @@ void tile_calc(scene_t *s, int level_count)
     tile_calc_node_distortion(s, level_count);
 
     tile_calc_normal(s, level_count);
+
 }

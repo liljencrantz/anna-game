@@ -17,14 +17,14 @@ int render_function_count[RENDER_PASS_COUNT];
 void render_init()
 {
     glClearDepth(1.0);				// Enables Clearing Of The Depth Buffer
-    glDepthFunc(GL_LESS);				// The Type Of Depth Test To Do
+    glDepthFunc(GL_LEQUAL);				// The Type Of Depth Test To Do
     glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
     glMatrixMode(GL_PROJECTION);
     
     gluPerspective(
-	90.0*4/3,
-	4.0/3.0,
+	70.0*16/10,
+	16.0/10.0,
 	1.0f,
 	3000.0f);	// Calculate The Aspect Ratio Of The Window
     
@@ -36,8 +36,8 @@ void render_init()
 //  glBlendFunc( GL_ONE, GL_ONE);
     
     render_terrain_init();
-    render_trees_init();    
-    render_actors_init();    
+//    render_trees_init();    
+//    render_markers_init();    
     render_balls_init();    
 }
 

@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+#include <GL/gl.h>
+//#include <GL/glext.h>
 
 #include "scene.h"
 #include "node.h"
@@ -15,6 +17,16 @@
 #define GRASS_WIND_AMPLITUDE 0.05
 #define GRASS_WIND_FREQUENCY 5.0
 
+typedef struct 
+{
+    float *vertex;
+    GLubyte *color;
+    GLuint *index;
+    int idx_count;
+    int vertex_count;
+}
+      vertex_data_t;
+
 
 typedef struct
 {
@@ -28,6 +40,10 @@ typedef struct
     
 }
     render_element_t;
+
+vertex_data_t vd;
+
+
 /*
 static GLfloat node_norm_factor(nid_t nid, scene_t *s, GLfloat *pos)
 {
@@ -53,7 +69,7 @@ static GLfloat node_norm_factor(nid_t nid, scene_t *s, GLfloat *pos)
 */
 
 
-static void render_prepare_node(scene_t *s, nid_t nid, float parent_level)
+static int render_prepare_node(scene_t *s, nid_t nid, float parent_level)
 {
     t_node_t *n = scene_nid_lookup(s, nid);
     nid_t child_id[4];
@@ -74,34 +90,58 @@ static void render_prepare_node(scene_t *s, nid_t nid, float parent_level)
 	if(error < 1.0)
 	{
 	    n->scale = parent_level;
+	    return 1;
 	}
 	else
 	{
+	    int res = 0;
+	    
 	    float my_level = error;//maxf(0.00001, minf(1.0, (1.0/error-1.0)*5.0));
 	    n->scale = 0.0;
 	    nid_get_children(nid, child_id);
 	    for(i=0; i<4; i++)
 	    {
-		render_prepare_node(s, child_id[i], my_level);
+		res += render_prepare_node(s, child_id[i], my_level);
 	    }
+	    return res;
 	}	    
     }
     else
     {
 	n->scale = -1.0;
     }
+    return 0;
 }
 
-static void vertex_perspective( scene_t *s, render_element_t *el, float *pos)
+static void vertex_perspective( scene_t *s, render_element_t *el, float *pos, vertex_data_t *vd, int idx0)
 {
     float a = el->vertex[0]-pos[0];
     float b = el->vertex[1]-pos[1];
     if (DRAW)
     {
+	vd->vertex[3*vd->vertex_count] = el->vertex[0];
+	vd->vertex[3*vd->vertex_count+1] = el->vertex[1];
+	vd->vertex[3*vd->vertex_count+2] = el->vertex[2]+render_height_correct(a,b);
+	
+	vd->color[4*vd->vertex_count] = el->color[0]*el->shade;
+	vd->color[4*vd->vertex_count+1] = el->color[1]*el->shade;
+	vd->color[4*vd->vertex_count+2] = el->color[2]*el->shade;
+	vd->color[4*vd->vertex_count+3] = 255;
+	
+	if(vd->vertex_count > idx0+1)
+	{
+	    vd->index[vd->idx_count++] = idx0;
+	    vd->index[vd->idx_count++] = vd->vertex_count-1;
+	    vd->index[vd->idx_count++] = vd->vertex_count;
+	}
+	
+	vd->vertex_count++;
+/*
 	glColor3ub( el->color[0]*el->shade, el->color[1]*el->shade, el->color[2]*el->shade);    
 //	printf( "%f %f %f\n", el->color[0]*el->shade, el->color[1]*el->shade, el->color[2]*el->shade);    
 	glVertex3f( el->vertex[0], el->vertex[1], el->vertex[2]+render_height_correct(a,b));
 //	printf("%f %f %f\n", el->vertex[0], el->vertex[1], el->vertex[2]+render_height_correct(a,b));
+*/
     }
 }
 
@@ -315,12 +355,13 @@ static inline void render_calculate_elements(
 }
 
 
-static void render_node(scene_t *s, nid_t nid)
+static void render_node(scene_t *s, nid_t nid, vertex_data_t *vd)
 {
     t_node_t *n = scene_nid_lookup(s, nid);
     render_element_t render_element[10];
     nid_t child_id[4];
     int i;
+    int idx0 = vd->vertex_count;
     
 //    glDisable(GL_DEPTH_TEST);
 
@@ -353,17 +394,16 @@ static void render_node(scene_t *s, nid_t nid)
 	render_calculate_elements( s, nid, n, render_element);
 
 	glBegin( GL_TRIANGLE_FAN );	
-	vertex_perspective( s, &render_element[MIDDLE_ELEMENT], s->camera.pos );
-	vertex_perspective( s, &render_element[7], s->camera.pos );
+	vertex_perspective( s, &render_element[MIDDLE_ELEMENT], s->camera.pos, vd, idx0 );
+	vertex_perspective( s, &render_element[7], s->camera.pos, vd, idx0 );
 
 	for( i=0; i<4; i++ )
 	{
 	    if( render_element[2*i].use )
 	    {
-		vertex_perspective( s, &render_element[2*i], s->camera.pos );
+		vertex_perspective( s, &render_element[2*i], s->camera.pos, vd, idx0 );
 	    }
-	    vertex_perspective( s, &render_element[2*i+1], s->camera.pos );
-	    
+	    vertex_perspective( s, &render_element[2*i+1], s->camera.pos, vd, idx0 );	    
 	}
 	glEnd();
 	/*
@@ -406,8 +446,6 @@ static void render_node(scene_t *s, nid_t nid)
 	vertex_perspective_l( s, &render_element[8], s->camera.pos );
 	vertex_perspective_l( s, &render_element[3], s->camera.pos );
 	glEnd();
-
-
 	*/
 #define SHADE_MAX 0.8
 	if(0 &&n->distance < GRASS_MAX_DISTANCE)
@@ -588,48 +626,102 @@ static void render_node(scene_t *s, nid_t nid)
 	nid_get_children(nid, child_id);
 	for( i=0; i<4; i++ )
 	{
-	    render_node( s, child_id[i]);
+	    render_node( s, child_id[i], vd);
 	}
     }
 }
 
-void vbo_test(scene_t *s)
-{
-/*
-#define NUMBER_OF_VERTICES 10
 #define NUMBER_OF_COMPONENTS_PER_VERTEX 3
-#define NUMBER_OF_COLORS 10
 #define NUMBER_OF_COMPONENTS_PER_COLOR 4
 
-
-    GLuint vbo;
+void render_data(vertex_data_t *vd)
+{
+    GLuint vbo, ibo;
     
     glGenBuffers(1, &vbo);
     // bind the buffer object to use
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-    const GLsizeiptr vertex_size = NUMBER_OF_VERTICES*NUMBER_OF_COMPONENTS_PER_VERTEX*sizeof(GLfloat);
-    const GLsizeiptr color_size = NUMBER_OF_COLORS*NUMBER_OF_COMPONENTS_PER_COLOR*sizeof(GLubyte);
+    
+    const GLsizeiptr vertex_size = vd->vertex_count*NUMBER_OF_COMPONENTS_PER_VERTEX*sizeof(GLfloat);
+    const GLsizeiptr color_size = vd->vertex_count*NUMBER_OF_COMPONENTS_PER_COLOR*sizeof(GLubyte);
     
     glBufferData(GL_ARRAY_BUFFER, vertex_size+color_size, 0, GL_STREAM_DRAW);
-*/  
+    GLvoid* vbo_buffer = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY); 
+    
+    // transfer the vertex data to the VBO 
+    memcpy(vbo_buffer, vd->vertex, vertex_size);
+    
+    // append color data to vertex data. To be optimal, 
+    // data should probably be interleaved and not appended 
+    vbo_buffer += vertex_size; 
+    memcpy(vbo_buffer, vd->color, color_size); 
+    glUnmapBuffer(GL_ARRAY_BUFFER); 
+    
+    // Describe to OpenGL where the vertex data is in the buffer 
+    glVertexPointer(3, GL_FLOAT, 0, (GLvoid*)((char*)NULL)); 
+    
+    // Describe to OpenGL where the color data is in the buffer
+    glColorPointer(4, GL_UNSIGNED_BYTE, 0, (GLvoid*)((char*)NULL+vertex_size));
+    
+    // create index buffer 
+    glGenBuffers(1, &ibo); 
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo); 
+    
+    // For constrast, instead of glBufferSubData and glMapBuffer, 
+    // we can directly supply the data in one-shot 
+    glBufferData(
+	GL_ELEMENT_ARRAY_BUFFER,
+	vd->idx_count*sizeof(GLuint), 
+	vd->index, 
+	GL_STREAM_DRAW);
+    
+    // Activate the VBOs to draw 
+    glBindBuffer(GL_ARRAY_BUFFER, vbo); 
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo); 
+    glEnableClientState(GL_VERTEX_ARRAY); 
+    glEnableClientState(GL_COLOR_ARRAY); 
+    
+    // This is the actual draw command 
+    glDrawElements(
+	GL_TRIANGLES,
+	vd->idx_count,
+	GL_UNSIGNED_INT,
+	(GLvoid*)((char*)NULL));
+    
+    glDeleteBuffers(1, &ibo);
+    glDeleteBuffers(1, &vbo);
 }
 
 void render_terrain( scene_t *s )
 {
-    vbo_test(s);
+    glDisable( GL_CULL_FACE );
     
     s->grass_offset=(0.5+0.5*cos(s->time*0.1))*sin(s->time*GRASS_WIND_FREQUENCY)*GRASS_WIND_AMPLITUDE;
+    
     nid_t root = node_get_root();
-    render_prepare_node(s, root, 0.0);
+    int node_count = render_prepare_node(s, root, 0.0);
+    vd.idx_count=0;
+    vd.vertex_count=0;
+    
     glEnable( GL_CULL_FACE );	
-    render_node(s, root);    
+    render_node(s, root, &vd);    
     glDisable( GL_CULL_FACE );
-//    printf("AAA\n");
+    
+    render_data(&vd);
 }
 
 void render_terrain_init()
 {
+    float *vdata = malloc((sizeof(float)*3+4)*10*3000);
+    GLubyte *cdata = &vdata[3*10*3000];
+        
+    vd.vertex = vdata;
+    vd.color = cdata;
+    vd.index = malloc(sizeof(int)*3000*3*8);
+    vd.idx_count=0;
+    vd.vertex_count=0;
+    
+    
     render_register(render_terrain, RENDER_PASS_SOLID);
 }
 

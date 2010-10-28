@@ -63,8 +63,8 @@ function run()
       sc.__peer, 
       42,42,3,
       40,0,0)
-   for i = 11, 200, 15 do
-      for j = 11, 200, 15 do
+   for i = 11, 200, 5 do
+      for j = 11, 200, 5 do
 	 if true then
 	    local x = i+5*math.sin(0.1*j)
 	    local y = j+5*math.sin(0.1*i)

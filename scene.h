@@ -36,7 +36,8 @@ typedef struct
     struct actor *player;
     
     void *lua_state;
-    
+    void *terrain_state;
+        
     tree_t tree[4096];
     size_t tree_count;
     

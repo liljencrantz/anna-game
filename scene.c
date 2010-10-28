@@ -25,7 +25,7 @@ void scene_init( scene_t *s, int lb, float scene_size )
     s->sun_light = 1.0;
 
     s->scene_size = scene_size;
-    s->render_quality=60.0;
+    s->render_quality=40.0;
 }
 
 float scene_hid_x_coord(scene_t *s, hid_t hid)

@@ -88,7 +88,7 @@ function Scene:step(dt)
       end
       self.cameraAngle = ca
    end
-   --self.cameraAngle = self.player.angle
+   self.cameraAngle = self.player.angle
    --self.cameraAngle = 0
    
    local tpos = self.player.pos
@@ -98,7 +98,8 @@ function Scene:step(dt)
    self.cameraPos = {
       self.cameraPos[1]*0.9 + tpos[1]*0.1,
       self.cameraPos[2]*0.9 + tpos[2]*0.1,
-      self.cameraPos[3]*0.9 + tpos[3]*0.1}
+      self.cameraPos[3]*0.9 + tpos[3]*0.1
+   }
 
 end
 

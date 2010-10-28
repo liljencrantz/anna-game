@@ -4,6 +4,7 @@ require("lua/util")
 require("lua/wrapper")
 require("lua/scene")
 require("lua/actor")
+require("lua/input")
 require("math")
 
 --[[
@@ -50,8 +51,6 @@ require("math")
 }
 ]]--
 
-require("lua/input")
-
 function run()
    local sc = scene.Scene.create(8, 200)
    
@@ -64,8 +63,8 @@ function run()
       sc.__peer, 
       42,42,3,
       40,0,0)
-   for i = 11, 200, 4 do
-      for j = 11, 200, 4 do
+   for i = 11, 200, 15 do
+      for j = 11, 200, 15 do
 	 if true then
 	    local x = i+5*math.sin(0.1*j)
 	    local y = j+5*math.sin(0.1*i)

@@ -14,6 +14,7 @@ typedef struct
 {
     size_t levels;
     float *error;
+    GLuint list_index;
     ball_point_t data[];
 }
     ball_type_t;

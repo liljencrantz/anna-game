@@ -46,7 +46,7 @@ ball_type_t *ball_load(char *name)
     }
 
     ball_calc(res);
-    
+
     return res;
     
 }

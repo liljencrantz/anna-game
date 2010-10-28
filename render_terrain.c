@@ -105,21 +105,6 @@ static void vertex_perspective( scene_t *s, render_element_t *el, float *pos)
     }
 }
 
-
-static void vertex_perspective_l( scene_t *s, render_element_t *el, float *pos)
-{
-    float a = el->vertex[0]-pos[0];
-    float b = el->vertex[1]-pos[1];
-    if (DRAW)
-    {
-	glColor3ub( 0,0,0);
-//	printf( "%f %f %f\n", el->color[0]*el->shade, el->color[1]*el->shade, el->color[2]*el->shade);    
-	glVertex3f( el->vertex[0], el->vertex[1], el->vertex[2]+render_height_correct(a,b)+0.01);
-//	printf("%f %f %f\n", el->vertex[0], el->vertex[1], el->vertex[2]+render_height_correct(a,b));
-    }
-}
-
-
 #define MIDDLE_ELEMENT 8
 
 
@@ -608,8 +593,32 @@ static void render_node(scene_t *s, nid_t nid)
     }
 }
 
+void vbo_test(scene_t *s)
+{
+/*
+#define NUMBER_OF_VERTICES 10
+#define NUMBER_OF_COMPONENTS_PER_VERTEX 3
+#define NUMBER_OF_COLORS 10
+#define NUMBER_OF_COMPONENTS_PER_COLOR 4
+
+
+    GLuint vbo;
+    
+    glGenBuffers(1, &vbo);
+    // bind the buffer object to use
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+    const GLsizeiptr vertex_size = NUMBER_OF_VERTICES*NUMBER_OF_COMPONENTS_PER_VERTEX*sizeof(GLfloat);
+    const GLsizeiptr color_size = NUMBER_OF_COLORS*NUMBER_OF_COMPONENTS_PER_COLOR*sizeof(GLubyte);
+    
+    glBufferData(GL_ARRAY_BUFFER, vertex_size+color_size, 0, GL_STREAM_DRAW);
+*/  
+}
+
 void render_terrain( scene_t *s )
 {
+    vbo_test(s);
+    
     s->grass_offset=(0.5+0.5*cos(s->time*0.1))*sin(s->time*GRASS_WIND_FREQUENCY)*GRASS_WIND_AMPLITUDE;
     nid_t root = node_get_root();
     render_prepare_node(s, root, 0.0);

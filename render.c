@@ -96,6 +96,12 @@ static void calc_pov( scene_t *s )
 
 static void render_setup_camera(scene_t *s)
 {
+    GLfloat view_dir[4];
+    view_dir[0] = 0;//s->camera.pos[0];
+    view_dir[1] = 0;//s->camera.pos[1];
+    view_dir[2] = 0;//s->camera.pos[2];
+    view_dir[3] = 1;
+    glLightfv(GL_LIGHT0, GL_POSITION, view_dir);
     #ifdef DRAW
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -137,6 +143,7 @@ static void render_setup_camera(scene_t *s)
 
 void render( scene_t *s )
 {
+    glPushMatrix();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     render_setup_camera(s);
     
@@ -150,6 +157,7 @@ void render( scene_t *s )
     }
     
     render_boids(s);
+    glPopMatrix();
     
 }
 

@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 #include <GL/gl.h>	
 #include <math.h>	
 
@@ -13,6 +14,14 @@
 Before: 
 31.3 fps
 render_ball: 42.9% CPU
+
+GLLight:
+25 fps
+render_ball: 47 % CPU
+
+Display lists:
+35.3 fps
+render_ball: 27 % CPU
 
  */
 #define BALL_COUNT(levels) (2*(0x55555555 & ((1<<(2*(levels+1)))-1)))
@@ -33,11 +42,13 @@ static inline void plain_vertex(
     int idx = ball_idx(level, x, y);
     ball_point_t *p=&b->data[idx];
     
-    float c = fabs(dot_prod(view_dir, ball_normal[idx], 3));
-    c = s->ambient_light + c*(s->sun_light-s->ambient_light);
+    glColor3f(0.2,0.4,0.1);
     
-    glColor3f(c*0.2,c*0.4,c*0.1);
-    
+    glNormal3f(
+	ball_normal[idx][0],
+	ball_normal[idx][1],
+	ball_normal[idx][2]
+	);    
     glVertex3f(
 	ball_normal[idx][0]*p->radius,
 	ball_normal[idx][1]*p->radius,
@@ -46,11 +57,9 @@ static inline void plain_vertex(
 }
 
 static inline void scale_vertex_sub(
-    scene_t *s,
     float f1, float f2, 
     int idx1, int idx2, int idx3,
-    ball_type_t *b,
-    float *view_dir)
+    ball_type_t *b)
 {
     float ff2 = 0.5*f2;
 
@@ -62,13 +71,8 @@ static inline void scale_vertex_sub(
     float r2 = b->data[idx2].radius;
     float r3 = b->data[idx3].radius;
     
-    float c1 = fabs(dot_prod(view_dir, ball_normal[idx1], 3));
-    float c2 = fabs(dot_prod(view_dir, ball_normal[idx2], 3));
-    float c3 = fabs(dot_prod(view_dir, ball_normal[idx3], 3));
-
-    float c = f1*c1 + ff2*(c2+c3);
-    c = s->ambient_light + c*(s->sun_light-s->ambient_light);
-    glColor3f(c*0.2,c*0.4,c*0.1);
+    glColor3f(0.2,0.4,0.1);
+    glNormal3fv(n1);
     
     glVertex3f(
 	n1[0]*f1*r1 + ff2*(n2[0]*r2+n3[0]*r3),
@@ -79,15 +83,12 @@ static inline void scale_vertex_sub(
 
 
 static inline void scale_vertex1(
-    scene_t *s,
     float f1, float f2, 
     int level, int x, int y, 
-    ball_type_t *b,
-    float *view_dir)
+    ball_type_t *b)
 {
     int idx1 = ball_idx(level, x, y);
     int idx2 = ball_idx(level-1, x/2, y/2);
-
 
     float *n1 = ball_normal[idx1];
     float *n2 = ball_normal[idx2];
@@ -95,13 +96,8 @@ static inline void scale_vertex1(
     float r1 = b->data[idx1].radius;
     float r2 = b->data[idx2].radius;
     
-    float c1 = fabs(dot_prod(view_dir, ball_normal[idx1], 3));
-    float c2 = fabs(dot_prod(view_dir, ball_normal[idx2], 3));
-
-    float c = f1*c1 + f2*(c2);
-    c = s->ambient_light + c*(s->sun_light-s->ambient_light);
-    glColor3f(c*0.2,c*0.4,c*0.1);
-    
+    glColor3f(0.2,0.4,0.1);
+    glNormal3fv(n1);
     glVertex3f(
 	n1[0]*f1*r1 + n2[0]*f2*(r2),
 	n1[1]*f1*r1 + n2[1]*f2*(r2),
@@ -110,46 +106,65 @@ static inline void scale_vertex1(
 }
 
 static inline void scale_vertex2(
-    scene_t *s,
     float f1, float f2, 
     int level, int x, int y, 
-    ball_type_t *b,
-    float *view_dir)
+    ball_type_t *b)
 {
     int idx1 = ball_idx(level, x, y);
     int idx2 = ball_idx(level-1, x/2, y/2);
     int idx3 = ball_idx(level-1, x/2, (y/2+1)%(1<<(level-1)));
-    
-    scale_vertex_sub(s, f1,f2,idx1,idx2,idx3,b,view_dir);
+    scale_vertex_sub(f1,f2,idx1,idx2,idx3,b);
 }
 
 static inline void scale_vertex3(
-    scene_t *s,
     float f1, float f2, 
     int level, int x, int y, 
-    ball_type_t *b,
-    float *view_dir)
-{
-    
+    ball_type_t *b)
+{    
     int idx1 = ball_idx(level, x, y);
     int idx2 = ball_idx(level-1, (x/2+1)%(1<<level), y/2);
     int idx3 = ball_idx(level-1, x/2, (y/2+1)%(1<<(level-1)));
-
-    scale_vertex_sub(s, f1,f2,idx1,idx2,idx3,b,view_dir);
+    scale_vertex_sub(f1,f2,idx1,idx2,idx3,b);
 }
 
 static inline void scale_vertex4(
-    scene_t *s,
     float f1, float f2, 
     int level, int x, int y, 
-    ball_type_t *b,
-    float *view_dir)
+    ball_type_t *b)
 {
     int idx1 = ball_idx(level, x, y);
     int idx2 = ball_idx(level-1, x/2, y/2);
     int idx3 = ball_idx(level-1, (x/2+1)%(1<<level), y/2);
+    scale_vertex_sub(f1,f2,idx1,idx2,idx3,b);    
+}
 
-    scale_vertex_sub(s, f1,f2,idx1,idx2,idx3,b,view_dir);    
+void render_ball_at_level(ball_type_t *t, int level)
+{
+    int i, j;
+    
+    glColor4f(1,0,0,1);
+    glBegin(GL_TRIANGLE_STRIP);
+    
+    int side_size = 1<<level;
+    int side_size2 = 2<<level;
+
+    for(j=1;j<side_size;j++)
+    {
+	for(i=0;i<side_size2;i++)
+	{
+	    plain_vertex(
+		0, level, i, j-1,
+		t, 0);
+	    plain_vertex(
+		0, level, i, j,
+		t, 0);
+	}	
+    }
+    plain_vertex(
+	0, level, 0, side_size-1,
+	t, 0);
+    
+    glEnd();
 }
 
 
@@ -163,31 +178,24 @@ void render_ball(scene_t *s, ball_t *t)
     
     GLfloat view_dir[3];
     subtract(t->pos, s->camera.pos, view_dir, 3);
-    
+
     GLfloat corr = render_height_correct(
 	view_dir[0],
 	view_dir[1]);
-    float distance_sq = dot_prod(view_dir, view_dir, 3);    
     float prev_error=2.0;
     float error;
+    float distance_sq = dot_prod(view_dir, view_dir, 3);
     
     for(level=2; level < t->type->levels; level++)
     {
 	error = t->scale*s->render_quality * t->type->error[level] / (0.0001 + sqrtf(distance_sq))*2;
-//	printf("%.2f\n", error);
-	
 	if(error < 1.0)
 	{
 	    break;
 	}
 	prev_error = error;
     }
-    
-    normalize(view_dir, view_dir, 3);
-    rotate_z(view_dir, -t->angle1*M_PI/180);
-    rotate_y(view_dir, -t->angle2*M_PI/180);
-//    rotate_x(view_dir, -t->angle3*M_PI/180);
-    
+
     glTranslatef( t->pos[0], t->pos[1], t->pos[2]+corr);
     glRotatef( t->angle1, 0.0f, 0.0f, 1.0f );
     glRotatef( t->angle2, 0.0f, 1.0f, 0.0f );
@@ -197,49 +205,52 @@ void render_ball(scene_t *s, ball_t *t)
     glPointSize(5.0);
     
     glColor4f(1,0,0,1);
-    glBegin(GL_TRIANGLE_STRIP);
     
     int side_size = 1<<level;
     int side_size2 = 2<<level;
 
     if(prev_error < SCALE_THRESHOLD)
     {
+	glBegin(GL_TRIANGLE_STRIP);
 	float f1 = (prev_error - 1.0)/(SCALE_THRESHOLD-1.0);
 	float f2 = (1.0 - f1);
 	ball_i++;
-	
-	for(j=1;j<(side_size-1);j++)
-	{
 
+	for(j=1;j<(side_size-1);j++)
+	{    
 	    for(i=0;i<side_size2;i+=2)
 	    {		
 		scale_vertex1(
-		    s, f1, f2, level, i, j-1, t->type, view_dir);
+		    f1, f2, level, i, j-1, t->type);
 		scale_vertex2(
-		    s, f1, f2, level, i, j, t->type, view_dir);
+		    f1, f2, level, i, j, t->type);
 		scale_vertex4(
-		    s, f1, f2, level, i+1, j-1, t->type, view_dir);
+		    f1, f2, level, i+1, j-1, t->type);
 		scale_vertex3(
-		    s, f1, f2, level, i+1, j, t->type, view_dir);
-	    }	
-
+		    f1, f2, level, i+1, j, t->type);
+	    }
 	    j++;
 	    for(i=0;i<side_size2;i+=2)
 	    {
 		scale_vertex2(
-		    s, f1, f2, level, i, j-1, t->type, view_dir);
+		    f1, f2, level, i, j-1, t->type);
 		scale_vertex1(
-		    s, f1, f2, level, i, j, t->type, view_dir);
+		    f1, f2, level, i, j, t->type);
 		scale_vertex3(
-		    s, f1, f2, level, i+1, j-1, t->type, view_dir);
+		    f1, f2, level, i+1, j-1, t->type);
 		scale_vertex4(
-		    s, f1, f2, level, i+1, j, t->type, view_dir);
+		    f1, f2, level, i+1, j, t->type);
 	    }
 	}	
+	glEnd();    
     }
     else
     {
 	ball_p++;
+	glCallList(t->type->list_index + level);
+/*	
+
+	glBegin(GL_TRIANGLE_STRIP);
 	for(j=1;j<side_size;j++)
 	{
 	    for(i=0;i<side_size2;i++)
@@ -255,10 +266,10 @@ void render_ball(scene_t *s, ball_t *t)
 	plain_vertex(
 	    s, level, 0, side_size-1,
 	    t->type, view_dir);
-
+	glEnd();    
+*/
     }
     
-    glEnd();    
     
     glPopMatrix();
 
@@ -269,6 +280,26 @@ void render_balls(scene_t *s)
 
     int i;
     glEnable( GL_CULL_FACE );	
+    glEnable(GL_LIGHTING);
+    glEnable(GL_RESCALE_NORMAL);
+    glShadeModel(GL_SMOOTH);
+
+    glEnable(GL_LIGHT0);
+
+
+// Create light components
+    float ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+    float diffuseLight[] = { 0.8f, 0.8f, 0.8, 1.0f };
+    float specularLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+    float position[] = { -50.5f, 50.0f, -4.0f, 100.0f };
+    
+// Assign created components to GL_LIGHT0
+    glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+    //glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
+
+    glColorMaterial ( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE ) ;
+    glEnable ( GL_COLOR_MATERIAL ) ;
     
     for(i=0; i<scene_ball_get_count(s); i++)
     {
@@ -277,7 +308,9 @@ void render_balls(scene_t *s)
 	if(ball->visible)
 	    render_ball(s, ball);
     }
+    glDisable(GL_LIGHT0);
     glDisable( GL_CULL_FACE );
+    glDisable(GL_LIGHTING);
 
 //    printf("%.2f\n", (float)ball_i/(ball_i+ball_p));
     

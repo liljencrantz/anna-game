@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <GL/gl.h>	
 
 #include "scene.h"
 #include "heightmap_element.h"
@@ -283,6 +284,19 @@ static void ball_calc_normal_hid(scene_t *s, hid_t hid)
 
 void ball_calc(ball_type_t *b)
 {
+    int i;
+    
     ball_calc_lod(b);
     ball_calc_node_distortion(b);
+
+    glEnable( GL_CULL_FACE );	
+    b->list_index = glGenLists(b->levels);
+    for(i=0;i<b->levels; i++)
+    {
+	glNewList(b->list_index+i, GL_COMPILE);
+	render_ball_at_level(b, i);
+	glEndList();
+    }
+    
+
 }

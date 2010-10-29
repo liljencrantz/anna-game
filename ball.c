@@ -16,7 +16,7 @@ ball_type_t *ball_type;
 ball_type_t *ball_type_create(size_t level)
 {
     size_t sz = sizeof(ball_type_t) + ball_point_count(level)* sizeof(ball_point_t) + level*sizeof(float);
-    printf("Ball has %d points\n",  ball_point_count(level));
+//    printf("Ball has %d points\n",  ball_point_count(level));
     
     ball_type_t *res = calloc(1,sz);
     

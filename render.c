@@ -146,7 +146,8 @@ void render( scene_t *s )
     glPushMatrix();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     render_setup_camera(s);
-    
+    render_terrain_start(s);
+
     int i, j;
     for(i=0; i<RENDER_PASS_COUNT; i++)
     {
@@ -157,6 +158,8 @@ void render( scene_t *s )
     }
     
     render_boids(s);
+    render_terrain_finish(s);
+    
     glPopMatrix();
     
 }

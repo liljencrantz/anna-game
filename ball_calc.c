@@ -243,7 +243,7 @@ static void ball_calc_node_distortion(ball_type_t *b)
 	b->error[i]/= count[i];
 	b->error[i]= pow(b->error[i], 1.0/2.0);
 
-	printf("Level %d, error %.3f\n", i, b->error[i]);
+//	printf("Level %d, error %.3f\n", i, b->error[i]);
     }
 
 }

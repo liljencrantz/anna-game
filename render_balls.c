@@ -10,28 +10,13 @@
 #include "util.h"
 #include "ball.h"
 
-/*
-Before: 
-31.3 fps
-render_ball: 42.9% CPU
-
-GLLight:
-25 fps
-render_ball: 47 % CPU
-
-Display lists:
-35.3 fps
-render_ball: 27 % CPU
-
- */
 #define BALL_COUNT(levels) (2*(0x55555555 & ((1<<(2*(levels+1)))-1)))
-#define SCALE_THRESHOLD 1.1
+#define BALL_SCALE_THRESHOLD 1.05
 
 float ball_normal[BALL_COUNT(BALL_LEVEL_MAX)][3];
 
 int ball_p=0;
 int ball_i=0;
-
 
 static inline void plain_vertex(
     scene_t *s,
@@ -72,7 +57,10 @@ static inline void scale_vertex_sub(
     float r3 = b->data[idx3].radius;
     
     glColor3f(0.2,0.4,0.1);
-    glNormal3fv(n1);
+    glNormal3f(
+	n1[0]*f1 + ff2*(n2[0]+n3[0]),
+	n1[1]*f1 + ff2*(n2[1]+n3[1]),
+	n1[2]*f1 + ff2*(n2[2]+n3[2]));
     
     glVertex3f(
 	n1[0]*f1*r1 + ff2*(n2[0]*r2+n3[0]*r3),
@@ -89,15 +77,18 @@ static inline void scale_vertex1(
 {
     int idx1 = ball_idx(level, x, y);
     int idx2 = ball_idx(level-1, x/2, y/2);
-
+    
     float *n1 = ball_normal[idx1];
     float *n2 = ball_normal[idx2];
-
+    
     float r1 = b->data[idx1].radius;
     float r2 = b->data[idx2].radius;
     
     glColor3f(0.2,0.4,0.1);
-    glNormal3fv(n1);
+    glNormal3f(
+	n1[0]*f1 + f2*n2[0],
+	n1[1]*f1 + f2*n2[1],
+	n1[2]*f1 + f2*n2[2]);
     glVertex3f(
 	n1[0]*f1*r1 + n2[0]*f2*(r2),
 	n1[1]*f1*r1 + n2[1]*f2*(r2),
@@ -188,7 +179,7 @@ void render_ball(scene_t *s, ball_t *t)
     
     for(level=2; level < t->type->levels; level++)
     {
-	error = t->scale*s->render_quality * t->type->error[level] / (0.0001 + sqrtf(distance_sq))*2;
+	error = t->scale*s->render_quality * t->type->error[level] / (0.0001 + sqrtf(distance_sq))*4;
 	if(error < 1.0)
 	{
 	    break;
@@ -209,10 +200,10 @@ void render_ball(scene_t *s, ball_t *t)
     int side_size = 1<<level;
     int side_size2 = 2<<level;
 
-    if(prev_error < SCALE_THRESHOLD)
+    if(prev_error < BALL_SCALE_THRESHOLD)
     {
 	glBegin(GL_TRIANGLE_STRIP);
-	float f1 = (prev_error - 1.0)/(SCALE_THRESHOLD-1.0);
+	float f1 = (prev_error - 1.0)/(BALL_SCALE_THRESHOLD-1.0);
 	float f2 = (1.0 - f1);
 	ball_i++;
 
@@ -242,34 +233,13 @@ void render_ball(scene_t *s, ball_t *t)
 		    f1, f2, level, i+1, j, t->type);
 	    }
 	}	
-	glEnd();    
+	glEnd();
     }
     else
     {
 	ball_p++;
 	glCallList(t->type->list_index + level);
-/*	
-
-	glBegin(GL_TRIANGLE_STRIP);
-	for(j=1;j<side_size;j++)
-	{
-	    for(i=0;i<side_size2;i++)
-	    {
-		plain_vertex(
-		    s, level, i, j-1,
-		    t->type, view_dir);
-		plain_vertex(
-		    s, level, i, j,
-		    t->type, view_dir);
-	    }	
-	}
-	plain_vertex(
-	    s, level, 0, side_size-1,
-	    t->type, view_dir);
-	glEnd();    
-*/
     }
-    
     
     glPopMatrix();
 
@@ -277,7 +247,6 @@ void render_ball(scene_t *s, ball_t *t)
 
 void render_balls(scene_t *s)
 {
-
     int i;
     glEnable( GL_CULL_FACE );	
     glEnable(GL_LIGHTING);

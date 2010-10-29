@@ -14,9 +14,9 @@
 #include "render.h"
 #include "tile.h"
 #include "boid.h"
-#include "liblua/src/lua.h"
-#include "liblua/src/lauxlib.h"
-#include "liblua/src/lualib.h"
+#include "lua5.1/lua.h"
+#include "lua5.1/lauxlib.h"
+#include "lua5.1/lualib.h"
 
 
 static lua_State *L;    

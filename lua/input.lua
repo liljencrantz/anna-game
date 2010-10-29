@@ -10,7 +10,6 @@ ARROW_UP = 273
 
 
 function handle(scene)
-   
    f=anna.Screen.keyGet
    a=actor.actions
    p = scene.player
@@ -33,6 +32,5 @@ function handle(scene)
 
    p.actions.turn_left = f(ARROW_LEFT)
    p.actions.turn_right = f(ARROW_RIGHT)
-   
 end
 

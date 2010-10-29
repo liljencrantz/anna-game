@@ -63,8 +63,8 @@ function run()
       sc.__peer, 
       42,42,3,
       40,0,0)
-   for i = 11, 200, 5 do
-      for j = 11, 200, 5 do
+   for i = 11, 200, 3 do
+      for j = 11, 200, 15 do
 	 if true then
 	    local x = i+5*math.sin(0.1*j)
 	    local y = j+5*math.sin(0.1*i)
@@ -88,7 +88,7 @@ function run()
       local now = sc:getRealTime()
       local dt = now-lastTime
 
-      framerate = 0.98 * framerate + 0.02/dt
+      framerate = 0.95 * framerate + 0.05/dt
       
       if i % 300 == 0 then
 	 print("Framerate is " .. framerate)

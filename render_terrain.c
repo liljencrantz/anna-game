@@ -21,7 +21,7 @@ typedef struct
 {
     float *vertex;
     GLubyte *color;
-    GLuint *index;
+    GLushort *index;
     int idx_count;
     int vertex_count;
 }
@@ -685,7 +685,7 @@ void render_data(vertex_data_t *vd)
     glDrawElements(
 	GL_TRIANGLES,
 	vd->idx_count,
-	GL_UNSIGNED_INT,
+	GL_UNSIGNED_SHORT,
 	(GLvoid*)((char*)NULL));
     
     glDeleteBuffers(1, &ibo);
@@ -717,7 +717,7 @@ void render_terrain_init()
         
     vd.vertex = vdata;
     vd.color = cdata;
-    vd.index = malloc(sizeof(int)*3000*3*8);
+    vd.index = malloc(sizeof(GLushort)*3000*3*8);
     vd.idx_count=0;
     vd.vertex_count=0;
     

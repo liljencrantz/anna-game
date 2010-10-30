@@ -11,9 +11,6 @@
 #include "render.h"
 #include "screen.h"
 
-render_function_t render_function[RENDER_PASS_COUNT][32];
-int render_function_count[RENDER_PASS_COUNT];
-
 void render_init()
 {
     glClearDepth(1.0);				// Enables Clearing Of The Depth Buffer
@@ -46,10 +43,6 @@ static GLfloat sign(GLfloat v)
     return v>0.0?1.0:-1.0;
 }
 
-void render_register(render_function_t f, int pass)
-{
-    render_function[pass][render_function_count[pass]++] = f;
-}
 
 static void calc_pov( scene_t *s )
 {
@@ -148,15 +141,9 @@ void render( scene_t *s )
     render_setup_camera(s);
     render_terrain_start(s);
 
-    int i, j;
-    for(i=0; i<RENDER_PASS_COUNT; i++)
-    {
-	for(j=0; j<render_function_count[i]; j++)
-	{
-	    render_function[i][j](s);    
-	}	
-    }
-    
+    render_balls(s);
+    render_trees_trunk(s);
+    render_trees_leaves(s);
     render_boids(s);
     render_terrain_finish(s);
     
@@ -166,6 +153,6 @@ void render( scene_t *s )
 
 GLfloat render_height_correct(GLfloat a, GLfloat b)
 {
-    return -0.005*(a*a+b*b);
+    return -0.002*(a*a+b*b);
 }
 

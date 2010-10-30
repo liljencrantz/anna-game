@@ -29,13 +29,6 @@ void render_boids(scene_t *s)
 	boid_set->target[1] = 40;//80 + 60 * sin(s->time*0.05);
 	boid_set->target[2] =  scene_get_height(s, boid_set->target[0],
 						   boid_set->target[1]) + 5;
-//	printf("%.2f %.2f %.2f\n", boid_set->target[0],boid_set->target[1],boid_set->target[2]);
-	//printf("%.2f %.2f %.2f\n", boid_set->data[0].pos[0],boid_set->data[0].pos[1],boid_set->data[0].pos[2]);
-	
-	boid_step(boid_set, 0.03);
-	//printf("B\n");
-	//printf("%.2f %.2f %.2f\n", boid_set->data[0].pos[0],boid_set->data[0].pos[1],boid_set->data[0].pos[2]);
-	
 	for(j=0; j<boid_set->count; j++)
 	{
 	    float corr = render_height_correct(
@@ -47,16 +40,9 @@ void render_boids(scene_t *s)
 		boid_set->data[j].pos[1],
 		boid_set->data[j].pos[2]+corr
 		);
-//	    printf("%.2f %.2f %.2f\n", boid_set->data[j].pos[0],boid_set->data[j].pos[1],boid_set->data[j].pos[2]);
 	}
-	//printf("C\n");
+
     }
     glEnd();
     
 }
-/*
-void render_balls_init()
-{
-    render_register(render_balls, RENDER_PASS_SOLID);    
-}
-*/

@@ -34,7 +34,6 @@ t_node_t *tile_nid_lookup(tile_t *tile, nid_t nid)
 	    NID_GET_LEVEL(nid), NID_GET_IDX(nid), idx);
 */	
 	return &tile->node[idx];
-	
     }
     else
     {

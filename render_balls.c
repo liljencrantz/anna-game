@@ -259,8 +259,6 @@ void render_balls(scene_t *s)
 // Create light components
     float ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
     float diffuseLight[] = { 0.8f, 0.8f, 0.8, 1.0f };
-    float specularLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-    float position[] = { -50.5f, 50.0f, -4.0f, 100.0f };
     
 // Assign created components to GL_LIGHT0
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
@@ -307,8 +305,6 @@ void render_balls_init()
 	    }	
 	}
     }    
-    
-    render_register(render_balls, RENDER_PASS_SOLID);    
     
 }
 

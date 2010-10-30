@@ -11,6 +11,9 @@
 #define TILE_SUBTILE_COUNT_PER_SIDE (1<<TILE_LEVELS)
 #define TILE_SUBTILE_NODE_PER_TILE(sublevel) (1<<(sublevel))
 #define TILE_SUBTILE_HM_PER_TILE(sublevel) (2<<(sublevel))
+/**
+   = sum(n=1..level){ 2^(2n+1) }
+ */
 #define TILE_NODE_COUNT(level) (0x55555555 & ((1<<(2*(level+1)))-1))
 #define TILE_HM_COUNT(level) (TILE_NODE_COUNT(level+1)-1)
 

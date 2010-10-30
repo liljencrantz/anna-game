@@ -12,6 +12,11 @@ Scene = wrapper.make(
 	    self.__peer = anna.ScenePeer.create(levels, size)
 	    self.__player = 1
 	    self.active = true
+	    self.cameraPos = {
+	       40,
+	       40,
+	       500
+	    }
 	 end,
       
       peer_getters = {
@@ -88,7 +93,7 @@ function Scene:step(dt)
       end
       self.cameraAngle = ca
    end
-   self.cameraAngle = self.player.angle
+   --self.cameraAngle = self.player.angle
    --self.cameraAngle = 0
    
    local tpos = self.player.pos

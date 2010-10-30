@@ -26,15 +26,12 @@ static inline int boid_dst_sq(boid_set_t *b, int i, int j)
 
 void boid_calc(boid_set_t *b, int idx, float *v1, float *v2, float *v3)
 {
-    int off, i;
+    int i;
     int friends=0;
 	
     for(i=0;i<b->count; i++)
     {
-//	printf("tralala %d\n", i);
-	
 	float dst_sq = boid_dst_sq(b, idx, i);
-	
 	if(dst_sq < (BOID_MAX_DISTANCE*BOID_MAX_DISTANCE))
 	{
 	    friends++;
@@ -45,20 +42,18 @@ void boid_calc(boid_set_t *b, int idx, float *v1, float *v2, float *v3)
 	    
 	    if(dst_sq < (BOID_MIN_DISTANCE * BOID_MIN_DISTANCE))
 	    {
-//		printf("OH NOES\n");
-		float woot = 0.1*(4,(BOID_MIN_DISTANCE * BOID_MIN_DISTANCE) - dst_sq);
+		float woot = 0.1*minf(4,(BOID_MIN_DISTANCE * BOID_MIN_DISTANCE) - dst_sq);
 		v2[0] -= (b->data[i].pos[0] - b->data[idx].pos[0])*woot;
 		v2[1] -= (b->data[i].pos[1] - b->data[idx].pos[1])*woot;
 		v2[2] -= (b->data[i].pos[2] - b->data[idx].pos[2])*woot;
 	    }
-
+	    
 	    v3[0] += b->data[i].vel[0];
 	    v3[1] += b->data[i].vel[1];
 	    v3[2] += b->data[i].vel[2];
-
+	    
 	}
     }
-    b->idx = (b->idx+off)%b->count;
     
     if(friends == 0)
 	return;
@@ -70,12 +65,7 @@ void boid_calc(boid_set_t *b, int idx, float *v1, float *v2, float *v3)
     v1[0] += (b->target[0] - b->data[idx].pos[0])/10;
     v1[1] += (b->target[1] - b->data[idx].pos[1])/10;
     v1[2] += (b->target[2] - b->data[idx].pos[2])/10;	    
-  
-/*
-    v1[0] -= b->data[idx].pos[0];
-    v1[1] -= b->data[idx].pos[1];
-    v1[2] -= b->data[idx].pos[2];
-*/  
+
     v3[0] /= (friends*18);
     v3[1] /= (friends*18);
     v3[2] /= (friends*18);    
@@ -126,7 +116,6 @@ boid_set_t *boid_set_init(int count, float x, float y)
 	b->data[i].pos[2] = 3;
     }
     b->speed = 20;
-    b->idx=0;
     
     return b;
     

@@ -16,18 +16,20 @@ typedef struct
 }
     render_state_t;
 
-typedef void(*render_function_t)(scene_t *s);
-//typedef void(*render_element_t)(void *element, scene_t *scene, render_state_t *state)
-
 void render_init();
-
-void render_register(render_function_t f, int pass);
 
 void render( scene_t *s );
 
 void render_terrain_init();
 void render_trees_init();
-void render_actors_init();
+void render_balls_init();
+void render_balls(scene_t *s);
+void render_trees_trunk(scene_t *s);
+void render_trees_leaves(scene_t *s);
+void render_terrain_start(scene_t *s);
+void render_terrain_finish(scene_t *s);
+void render_boids(scene_t *s);
+
 
 GLfloat render_height_correct(GLfloat a, GLfloat b);
 

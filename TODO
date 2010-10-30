@@ -1,0 +1,22 @@
+Performance:
+
+* Use VBOs with primitive restart to render interpolated balls.
+* Move ball interpolation into separate thread.
+* Create a separate AI thread?
+
+World
+
+* Start using disk backend for terrain loading
+* Enable world editing in the Lua layer
+* Start supporting multiple ball and tree types
+
+Art
+
+* Skybox
+* Clouds
+* Stars
+* Finish the first tree type
+* Make a couple more tree types
+
+
+

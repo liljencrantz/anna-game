@@ -104,9 +104,6 @@ tree_type_t *tree_load(char *name)
 
 #include "tree_branch_data.c"
 
-    tree_section_type_t * connection1_tid = t1;
-    tree_section_type_t * jtid = t1;
-    
     /*
       Stem
      */

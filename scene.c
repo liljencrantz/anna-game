@@ -10,7 +10,7 @@
 #include "util.h"
 #include "scene.h"
 
-//#include "generate.h"
+#define RENDER_DISTANCE 130
 
 void scene_init( scene_t *s, int lb, float scene_size )
 {
@@ -23,9 +23,9 @@ void scene_init( scene_t *s, int lb, float scene_size )
     
     s->ambient_light = 0.5;
     s->sun_light = 1.0;
-
+    
     s->scene_size = scene_size;
-    s->render_quality=8.0;
+    s->render_quality=40.0;
 }
 
 float scene_hid_x_coord(scene_t *s, hid_t hid)
@@ -42,7 +42,10 @@ float scene_hid_y_coord(scene_t *s, hid_t hid)
     return (s->scene_size * idx) / max;
 }
 
-static void scene_get_slope_level( scene_t *s, int level, float xf, float yf, float *slope )
+static void scene_get_slope_level( 
+    scene_t *s, int level, 
+    float xf, float yf, 
+    float *slope )
 {
     int points_at_level = (2 << level);
     float scaled_x = xf*points_at_level/s->scene_size;
@@ -111,22 +114,26 @@ float scene_get_height_level( scene_t *s, int level, float xf, float yf )
     int y_inc = (base_y < (points_at_level-2))?1:0;
     int x_inc = (base_x < (points_at_level-2))?1:0;
     
-    if((base_x >= points_at_level-1) ||
+    if((base_x < 0) ||
+       (base_y < 0) ||
+       (base_x >= points_at_level-1) ||
        (base_y >= points_at_level-1))
     {
 	return 0.0;
     }
-        
+    
+    //fprintf(stderr, "%d %.2f %.2f\n", level, xf, yf);
+    
     //printf("Base %d %d %d\n", level, base_x, base_y);
     //printf("Figure out height at %.2f %.2f\n", xf, yf);
+
     if(f1 >= 1.0)
     {
-	printf("OOOOPS, lvl %d, xf %.5f, yf %.5f, f %.2f %.2f\n", level, xf, yf, f1, f2);
-	
+	printf(
+	    "OOOOPS, lvl %d, xf %.5f, yf %.5f, f %.2f %.2f\n", 
+	    level, xf, yf, f1, f2);
     }
     
-    assert(f1<1.0);
-    assert(f2<1.0);
     //printf("Factors: %.2f %.2f\n", f1,f2);
     
     HID_SET(hid, level, base_x, base_y);
@@ -180,10 +187,8 @@ float scene_nid_radius(scene_t *s, nid_t nid)
     int level = NID_GET_LEVEL(nid);
     int points_at_level = 1 << level;
     float side = s->scene_size / points_at_level;
-    return side * 0.7082;
-    
+    return side * 0.7082;   
 }
-
 
 int scene_nid_is_visible(scene_t *s, nid_t nid, view_t *pos)
 {
@@ -204,10 +209,8 @@ int scene_is_visible(scene_t *s, float *pos, float radius)
 	}
     ;
     float dst_sq = diff[0]*diff[0] + diff[1]*diff[1];
-    if(dst_sq > ((80+radius)*(80+radius)))
+    if(dst_sq > ((RENDER_DISTANCE+radius)*(RENDER_DISTANCE+radius)))
 	return 0;
-    
-
 
 //    printf("Check if node %d %d %d is visible.\n", NID_GET_LEVEL(nid), NID_GET_X_POS(nid), NID_GET_Y_POS(nid));
     for( i=2; i<3; i++ ){
@@ -216,6 +219,7 @@ int scene_is_visible(scene_t *s, float *pos, float radius)
 	int side = s->camera.side[i];
 	visible=0;
 	float proj_y = pos[0]*k + m + radius*(1+fabs(k))*(side?-1.0:1.0);
+	
 	if( side )
 	    visible |=  proj_y <= pos[1];
 	else
@@ -226,8 +230,165 @@ int scene_is_visible(scene_t *s, float *pos, float radius)
 	    return 0;
 	}
     }
-
+    
     return 1;
+}
+
+
+void scene_tree_destroy(
+    scene_t *s, 
+    int tid)
+{
+    s->tree_used[tid/32] &= ~(1<<(tid%32));
+    s->tree_search_start = mini(tid, s->tree_search_start);
+    s->tree_count--;
+}
+
+tree_t *scene_tree_get(scene_t *s, size_t idx)
+{
+    return &s->tree[idx];
+}
+
+size_t scene_tree_get_count(scene_t *s)
+{
+    return s->tree_count;
+}
+
+static inline int scene_tree_free(scene_t *s, size_t tid)
+{
+    return !(s->tree_used[tid/32] & (1<<(tid%32)));
+}
+
+int scene_tree_create(
+    scene_t *s,
+    char *tree_type_name,
+    float *pos,
+    float angle,
+    float scale)
+{
+    int idx = s->tree_search_start;
+    while(!scene_tree_free(s, idx))
+	idx++;
+    
+    tree_t *t = &s->tree[idx];
+    
+    t->pos[0] = pos[0];
+    t->pos[1] = pos[1];
+    t->pos[2] = scene_get_height(s, pos[0], pos[1]);
+    //printf("Create tree at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
+    t->type = tree_type_get(tree_type_name);
+    t->angle = angle;
+    t->radius = 3.0;
+    t->scale = 1.0;
+    
+    s->tree_count++;
+    s->tree_search_start = idx+1;
+    s->tree_used[idx/32] |= (1<<(idx%32));
+    
+    return idx;
+}
+
+
+
+
+
+void scene_ball_destroy(
+    scene_t *s, 
+    int tid)
+{
+    s->ball_used[tid/32] &= ~(1<<(tid%32));
+    s->ball_search_start = mini(tid, s->ball_search_start);
+    s->ball_count--;
+}
+
+ball_t *scene_ball_get(scene_t *s, size_t idx)
+{
+    return &s->ball[idx];
+}
+
+size_t scene_ball_get_count(scene_t *s)
+{
+    return s->ball_count;
+}
+
+static inline int scene_ball_free(scene_t *s, size_t tid)
+{
+    return !(s->ball_used[tid/32] & (1<<(tid%32)));
+}
+
+int scene_ball_create(
+    scene_t *s,
+    char *ball_type_name,
+    float scale)
+{
+    int idx = s->ball_search_start;
+    while(!scene_ball_free(s, idx))
+	idx++;
+    
+    ball_t *t = &s->ball[idx];
+    
+    //printf("Create ball at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
+    t->type = ball_type_get(ball_type_name);
+    t->scale = scale;
+    
+    s->ball_count++;
+    s->ball_search_start = idx+1;
+    s->ball_used[idx/32] |= (1<<(idx%32));
+    
+    return idx;
+}
+
+
+
+
+
+void scene_boid_set_destroy(
+    scene_t *s, 
+    int tid)
+{
+    s->boid_set_used[tid/32] &= ~(1<<(tid%32));
+    s->boid_set_search_start = mini(tid, s->boid_set_search_start);
+    s->boid_set_count--;
+}
+
+boid_set_t *scene_boid_set_get(scene_t *s, size_t idx)
+{
+//    printf("Wee, get boid_set of scene %d at address %d with index %d\n", s, s->boid_set[idx], idx);
+    return s->boid_set[idx];
+}
+
+size_t scene_boid_set_get_count(scene_t *s)
+{
+    return s->boid_set_count;
+}
+
+static inline int scene_boid_set_is_free(scene_t *s, size_t tid)
+{
+    return !(s->boid_set_used[tid/32] & (1<<(tid%32)));
+}
+
+int scene_boid_set_create(
+    scene_t *s,
+    int count,
+    float x,
+    float y)
+{
+    int idx = s->boid_set_search_start;
+    while(!scene_boid_set_is_free(s, idx))
+	idx++;
+    
+    boid_set_t *t = boid_set_init(count, x, y);
+    s->boid_set[idx] = t;
+    //  printf("Wee, create boid_set at %d with index %d\n", s->boid_set[idx], idx);
+    s->boid_set_count++;
+    s->boid_set_search_start = idx+1;
+    s->boid_set_used[idx/32] |= (1<<(idx%32));
+    
+    return idx;
+}
+
+void save_scene(scene_t *s, char *dir_name)
+{
     
 
 }

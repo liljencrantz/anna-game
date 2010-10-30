@@ -70,9 +70,7 @@ typedef struct
        from this node level and the parent node.
 
     */
-    GLfloat scale;
-
-    
+    GLfloat scale;    
 }
 t_node_t;
 

@@ -12,8 +12,6 @@ typedef struct
 typedef struct
 {
     int count;
-    int idx;
-    
     float speed;
     float target[3];
     boid_t data[];

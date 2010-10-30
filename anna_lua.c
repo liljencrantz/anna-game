@@ -143,37 +143,50 @@ static int set_int (lua_State *L, void *v)
     return 0;
 }
 */
-static int get_float (lua_State *L, void *v)
+
+static int get_float (lua_State *L, void *v, off_t off)
 {
-    lua_pushnumber(L, *(float*)v);
+    lua_pushnumber(L, *(float*)(v+off));
     return 1;
 }
 
-static int set_float (lua_State *L, void *v)
+static int set_float (lua_State *L, void *v, off_t off)
 {
-    *(float*)v = luaL_checknumber(L, 3);
+    *((float*)(v+off)) = luaL_checknumber(L, 3);
     return 0;
 }
 
-static int get_double (lua_State *L, void *v)
+static int get_ptr_float (lua_State *L, void *v, off_t off)
 {
-    lua_pushnumber(L, *(double*)v);
+    lua_pushnumber(L, *(float*)(*(void **)v+off));
     return 1;
 }
 
-static int set_double (lua_State *L, void *v)
+static int set_ptr_float (lua_State *L, void *v, off_t off)
 {
-    *(double*)v = luaL_checknumber(L, 3);
+    *((float*)(*(void**)v+off)) = luaL_checknumber(L, 3);
     return 0;
 }
 
-static int set_pointer (lua_State *L, void *v)
+static int get_double (lua_State *L, void *v, off_t off)
 {
-    *(void **)v = (void *)lua_topointer(L, 3);
+    lua_pushnumber(L, *(double*)(v+off));
+    return 1;
+}
+
+static int set_double (lua_State *L, void *v, off_t off)
+{
+    *(double*)(v+off) = luaL_checknumber(L, 3);
     return 0;
 }
 
-typedef int (*Xet_func) (lua_State *L, void *v);
+static int set_pointer (lua_State *L, void *v, off_t off)
+{
+    *(void **)(v+off) = (void *)lua_topointer(L, 3);
+    return 0;
+}
+
+typedef int (*Xet_func) (lua_State *L, void *v, off_t off);
 
 typedef const struct{
     const char *name;  /* member name */
@@ -198,7 +211,7 @@ static int Xet_call (lua_State *L)
   register_member_t *m = (register_member_t *)lua_touserdata(L, -1);  /* member info */
   lua_pop(L, 1);                               /* drop lightuserdata */
   luaL_checktype(L, 1, LUA_TUSERDATA);
-  return m->func(L, (void *)((char *)lua_touserdata(L, 1) + m->offset));
+  return m->func(L, (void *)((char *)lua_touserdata(L, 1)), m->offset);
 }
 
 
@@ -333,31 +346,44 @@ static int lua_ball_create (lua_State *L)
     int *res = (int *)lua_newuserdata(L, sizeof(int));
     luaL_getmetatable(L, "BallPeer");
     lua_setmetatable(L, -2);    
-    float pos[] = 
-	{
-	    0,0,0
-	}
-    ;
     
     *res = scene_ball_create(
 	(scene_t *)lua_topointer(L, 1),
 	(char *)luaL_checkstring(L, 2),
 	luaL_checknumber(L, 3));
-        
+
     return 1;
 }
 static int lua_boid_set_create (lua_State *L)
 {
-    int *res = (int *)lua_newuserdata(L, sizeof(int));
+    scene_t *s = (scene_t *)lua_topointer(L, 1);
+    boid_set_t **res = (boid_set_t **)lua_newuserdata(L, sizeof(boid_set_t *));
     luaL_getmetatable(L, "BoidSetPeer");
     lua_setmetatable(L, -2);    
-    *res = scene_boid_set_create(
-	(scene_t *)lua_topointer(L, 1),
-	luaL_checkint(L, 2),
-	luaL_checknumber(L, 3),
-	luaL_checknumber(L, 4));
-    
+    *res = scene_boid_set_get(
+	s, 
+	scene_boid_set_create(
+	    s,
+	    luaL_checkint(L, 2),
+	    luaL_checknumber(L, 3),
+	    luaL_checknumber(L, 4)));
+/*    printf("Wee, we have created a boid set with index %d at address %d\n", *res,
+      scene_boid_set_get(s, *res));
+*/  
     return 1;
+}
+
+static int lua_boid_step(lua_State *L)
+{
+    boid_set_t **t = (boid_set_t **)check_item(L, 1, "BoidSetPeer");
+    scene_t *s = (scene_t *)check_item(L, 2, "ScenePeer");
+    float dt = luaL_checknumber(L, 3);
+/*    printf(
+	"Wee, do step on boid set with index %d, address %d\n", 
+	*t, scene_boid_set_get(s, *t));*/
+    boid_step(*t, dt);
+    
+    return 0;
 }
 
 static int lua_ball_set_location(lua_State *L)
@@ -684,17 +710,24 @@ void register_types(
 	screen_meta_methods,
 	screen_getters,
 	screen_setters);
-
+    
     static const register_member_t boid_set_getters[] = {
+	{"targetX",   get_ptr_float, offsetof(boid_set_t,target)},
+	{"targetY",   get_ptr_float, offsetof(boid_set_t,target)+sizeof(float)},
+	{"targetZ",   get_ptr_float, offsetof(boid_set_t,target)+2*sizeof(float)},
 	{0,0}
     };
-
+    
     static const register_member_t boid_set_setters[] = {
+	{"targetX",   set_ptr_float, offsetof(boid_set_t,target)},
+	{"targetY",   set_ptr_float, offsetof(boid_set_t,target)+sizeof(float)},
+	{"targetZ",   set_ptr_float, offsetof(boid_set_t,target)+2*sizeof(float)},
 	{0,0}
     };
     
     static const luaL_reg boid_set_methods[] = {
 	{"create", lua_boid_set_create},	
+	{"step", lua_boid_step},	
 	{0,0}
     };
 

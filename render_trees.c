@@ -312,8 +312,5 @@ void render_trees_init()
 //	printf("%d\n", color_offset[i][2]);
     }
     
-    render_register(render_trees_trunk, RENDER_PASS_SOLID);    
-    render_register(render_trees_leaves, RENDER_PASS_SOLID);    
-    
 }
 

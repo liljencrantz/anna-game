@@ -37,7 +37,6 @@ void nid_get_hid(nid_t nid, hid_t *hid)
     int x = 2*NID_GET_X_POS(nid);
     int y = 2*NID_GET_Y_POS(nid);
     int level = NID_GET_LEVEL(nid);
-    int i, j;
     HID_SET(hid[0], level, x, y+1);
     HID_SET(hid[1], level, x, y);
     HID_SET(hid[2], level, x+1, y);
@@ -47,7 +46,6 @@ void nid_get_hid(nid_t nid, hid_t *hid)
     HID_SET(hid[6], level, x+1, y+2);
     HID_SET(hid[7], level, x, y+2);
     HID_SET(hid[8], level, x+1, y+1);
-
 }
 
 int nid_is_edge(nid_t nid)

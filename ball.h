@@ -53,5 +53,8 @@ static inline size_t ball_idx(int level, int x, int y)
 
 void ball_calc(ball_type_t *b);
 ball_type_t *ball_type_create(size_t level);
-//void ball_type_set(ball_type_t *b, int 
+void ball_type_set(ball_type_t *ball, int x, int y, float h, float r, float g, float b);
+void ball_type_save(ball_type_t *b, char *fn);
+ball_type_t *ball_type_get(char *name);
+
 #endif

@@ -330,12 +330,11 @@ static inline void render_calculate_elements(
 	el_arr[i] = scene_hid_lookup(s, hid_max_arr[i]);
     }
     
-    
     for(i=1;i<MIDDLE_ELEMENT;i+=2)
     {
 	//printf("Lookup he %d %d %d\n", HID_GET_LEVEL(hid[i]), HID_GET_X_POS(hid[i]), HID_GET_Y_POS(hid[i]));
 	interpolate_corner(s, nid, hid_max_arr, node, node_arr, element, el_arr, i);
-
+	
 	subtract(element[i].vertex, s->camera.pos, element[i].direction, 3);
 	element[i].direction[2] -= 2.0*render_height_correct(element[i].direction[0], element[i].direction[1]);
 	
@@ -397,10 +396,6 @@ static void render_node(scene_t *s, nid_t nid, vertex_data_t *vd)
     
     if(n->scale > 0.0 )
     {
-	if(n->distance > 80)
-	{
-	    return;
-	}
 	
 	if(nid_is_edge(nid))
 	{

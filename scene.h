@@ -10,12 +10,16 @@
 #include "ball.h"
 #include "boid.h"
 
+#define SCENE_TREE_MAX 4096
+#define SCENE_BALL_MAX 8192
+#define SCENE_BOID_SET_MAX 16
+
 /**
    The scene object is rather large, because it contains statically
    allocated memory used for storing trees, balls, boids, etc. The
    reason for statically allocating these is to allow adding of simple
    objects but avoiding memory allocations in the main thread.
- */
+*/
 
 typedef struct
 {
@@ -29,7 +33,7 @@ typedef struct
     float render_quality;
     
     view_t camera;	
-
+    
     float leaf_offset;
     float grass_offset;
     
@@ -37,31 +41,42 @@ typedef struct
     
     void *lua_state;
     void *terrain_state;
-        
-    tree_t tree[4096];
+    
+    tree_t tree[SCENE_TREE_MAX];
+    int tree_used[SCENE_TREE_MAX/32];
+    size_t tree_search_start;
     size_t tree_count;
     
-    ball_t ball[4096];
+    ball_t ball[SCENE_BALL_MAX];
+    int ball_used[SCENE_BALL_MAX/32];
+    size_t ball_search_start;
     size_t ball_count;
     
-    boid_set_t *boid_set[16];
-    size_t boid_set_count;
-    
+    boid_set_t *boid_set[SCENE_BOID_SET_MAX];
+    int boid_set_used[SCENE_BOID_SET_MAX/32];
+    size_t boid_set_search_start;
+    size_t boid_set_count;    
 }
 scene_t;
 
+/**
+   Return the terrain node with the specified nid
+ */
 #define scene_nid_lookup(s,nid) (tile_nid_lookup((s)->root_tile, nid))
+/**
+   Return the heightmap element with the specified hid
+ */
 #define scene_hid_lookup(s,hid) (tile_hid_lookup((s)->root_tile, hid))
 
-heightmap_element_t *scene_heighmap_get(
-    scene_t *s, 
-    hid_t hid);
-
-t_node_t *scene_node_get(
-    scene_t *s, 
-    nid_t nid);
-
+/**
+   Returns the height of the world at the specified position
+ */
 float scene_get_height( scene_t *s, float xf, float yf );
+/**
+   Returns the slope of the world at the specified position.
+
+   \param slope is the destination value, a two element vector.
+ */
 void scene_get_slope( scene_t *s, float xf, float yf, float *slope);
 float scene_get_height_level( scene_t *s, int level, float xf, float yf );
 
@@ -93,109 +108,38 @@ int scene_is_visible(scene_t *s, float *pos, float radius);
 //int get_tile_count( scene_t *s );
 //void get_all_tiles( scene_t *s, tile_t ** );
 
-static inline void scene_tree_destroy(
+void scene_tree_destroy(
     scene_t *s, 
-    int tid)
-{
-    s->tree[tid] = s->tree[--s->tree_count];
-}
-
-
-static inline tree_t *scene_tree_get(scene_t *s, size_t idx)
-{
-    return &s->tree[idx];
-}
-
-static inline size_t scene_tree_get_count(scene_t *s)
-{
-    return s->tree_count;
-}
-
-static inline int scene_tree_create(
+    int tid);
+tree_t *scene_tree_get(scene_t *s, size_t idx);
+size_t scene_tree_get_count(scene_t *s);
+int scene_tree_create(
     scene_t *s,
     char *tree_type_name,
     float *pos,
     float angle,
-    float scale)
-{
-    tree_t *t = &s->tree[s->tree_count];
-    
-    t->pos[0] = pos[0];
-    t->pos[1] = pos[1];
-    t->pos[2] = scene_get_height(s, pos[0], pos[1]);
-    //printf("Create tree at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
-    t->type = tree_type_get(tree_type_name);
-    t->angle = angle;
-    t->radius = 3.0;
-    t->scale = 1.0;
-    return s->tree_count++;
-}
+    float scale);
 
-static inline void scene_ball_destroy(
+void scene_ball_destroy(
     scene_t *s, 
-    int tid)
-{
-    s->ball[tid] = s->ball[--s->ball_count];
-}
-
-static inline ball_t *scene_ball_get(scene_t *s, size_t idx)
-{
-    return &s->ball[idx];
-}
-
-static inline size_t scene_ball_get_count(scene_t *s)
-{
-    return s->ball_count;
-}
-
-static inline int scene_ball_create(
+    int tid);
+ball_t *scene_ball_get(scene_t *s, size_t idx);
+size_t scene_ball_get_count(scene_t *s);
+int scene_ball_create(
     scene_t *s,
     char *ball_type_name,
-    float scale)
-{
-    ball_t *t = &s->ball[s->ball_count];
-    
-    t->pos[0] = 0;
-    t->pos[1] = 0;
-    t->pos[2] = 0;
+    float scale);
 
-//    printf("Create ball at %f %f %f, scale is %.2f\n", pos[0], pos[1], t->pos[2], scale);
-    t->type = ball_type_get(ball_type_name);
-    t->angle1 = 0.0;
-    t->angle2 = 0.0;
-    t->scale = scale;
-    return s->ball_count++;
-}
-
-
-static inline void scene_boid_set_destroy(
+void scene_boid_set_destroy(
     scene_t *s, 
-    int tid)
-{
-    free(s->boid_set[tid]);
-    s->boid_set[tid] = s->boid_set[--s->boid_set_count];
-}
-
-
-static inline boid_set_t *scene_boid_set_get(scene_t *s, size_t idx)
-{
-    return s->boid_set[idx];
-}
-
-static inline size_t scene_boid_set_get_count(scene_t *s)
-{
-    return s->boid_set_count;
-}
-
-static inline int scene_boid_set_create(
+    int tid);
+boid_set_t *scene_boid_set_get(scene_t *s, size_t idx);
+size_t scene_boid_set_get_count(scene_t *s);
+int scene_boid_set_create(
     scene_t *s,
     int count,
     float x,
-    float y)
-{
-    s->boid_set[s->boid_set_count] = boid_set_init(count, x, y);
-    return s->boid_set_count++;
-}
+    float y);
 
 #endif
 

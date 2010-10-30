@@ -667,3 +667,25 @@ double get_time()
     return (double)time_struct.tv_sec+((double)time_struct.tv_usec)/1000000.0;
 }
 
+int hash_str_cmp( void *a, void *b )
+{
+	return strcmp((char *)a,(char *)b) == 0;
+}
+
+/**
+   Helper function for hash_wcs_func
+*/
+static unsigned int rotl5( unsigned int in )
+{
+	return (in<<5|in>>27);
+}
+int hash_str_func( void *data )
+{
+	int res = 0x67452301u;
+	const char *str = data;	
+
+	while( *str )
+		res = (18499*rotl5(res)) ^ *str++;
+	
+	return res;
+}

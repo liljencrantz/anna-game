@@ -19,29 +19,30 @@ void render_boids(scene_t *s)
     glPointSize(8);
     glColor3f(0,0,1);    
     glBegin(GL_POINTS);
+    int count = 0;
     
-    for(i=0; i<scene_boid_set_get_count(s); i++)
+    for(i=0;; i++)
     {
-	//printf("A\n");
-	
 	boid_set_t *boid_set = scene_boid_set_get(s, i);
-	boid_set->target[0] = 100 - 60 * cos(s->time*0.01);
-	boid_set->target[1] = 40;//80 + 60 * sin(s->time*0.05);
-	boid_set->target[2] =  scene_get_height(s, boid_set->target[0],
-						   boid_set->target[1]) + 5;
-	for(j=0; j<boid_set->count; j++)
+	if( boid_set)
 	{
-	    float corr = render_height_correct(
-		boid_set->data[j].pos[0]-s->camera.pos[0],
-		boid_set->data[j].pos[1]-s->camera.pos[1]
-		);
-	    glVertex3f(
-		boid_set->data[j].pos[0],
-		boid_set->data[j].pos[1],
-		boid_set->data[j].pos[2]+corr
-		);
-	}
-
+	    count++;
+	    
+	    for(j=0; j<boid_set->count; j++)
+	    {
+		float corr = render_height_correct(
+		    boid_set->data[j].pos[0]-s->camera.pos[0],
+		    boid_set->data[j].pos[1]-s->camera.pos[1]
+		    );
+		glVertex3f(
+		    boid_set->data[j].pos[0],
+		    boid_set->data[j].pos[1],
+		    boid_set->data[j].pos[2]+corr
+		    );
+	    }
+	    if(count >= scene_boid_set_get_count(s))
+		break;
+	}	
     }
     glEnd();
     

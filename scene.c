@@ -244,11 +244,6 @@ void scene_tree_destroy(
     s->tree_count--;
 }
 
-tree_t *scene_tree_get(scene_t *s, size_t idx)
-{
-    return &s->tree[idx];
-}
-
 size_t scene_tree_get_count(scene_t *s)
 {
     return s->tree_count;
@@ -258,6 +253,12 @@ static inline int scene_tree_free(scene_t *s, size_t tid)
 {
     return !(s->tree_used[tid/32] & (1<<(tid%32)));
 }
+
+tree_t *scene_tree_get(scene_t *s, size_t idx)
+{
+    return scene_tree_free(s, idx)?0:&s->tree[idx];
+}
+
 
 int scene_tree_create(
     scene_t *s,
@@ -301,11 +302,6 @@ void scene_ball_destroy(
     s->ball_count--;
 }
 
-ball_t *scene_ball_get(scene_t *s, size_t idx)
-{
-    return &s->ball[idx];
-}
-
 size_t scene_ball_get_count(scene_t *s)
 {
     return s->ball_count;
@@ -314,6 +310,11 @@ size_t scene_ball_get_count(scene_t *s)
 static inline int scene_ball_free(scene_t *s, size_t tid)
 {
     return !(s->ball_used[tid/32] & (1<<(tid%32)));
+}
+
+ball_t *scene_ball_get(scene_t *s, size_t idx)
+{
+    return scene_ball_free(s, idx)?0:&s->ball[idx];
 }
 
 int scene_ball_create(
@@ -351,12 +352,6 @@ void scene_boid_set_destroy(
     s->boid_set_count--;
 }
 
-boid_set_t *scene_boid_set_get(scene_t *s, size_t idx)
-{
-//    printf("Wee, get boid_set of scene %d at address %d with index %d\n", s, s->boid_set[idx], idx);
-    return s->boid_set[idx];
-}
-
 size_t scene_boid_set_get_count(scene_t *s)
 {
     return s->boid_set_count;
@@ -365,6 +360,11 @@ size_t scene_boid_set_get_count(scene_t *s)
 static inline int scene_boid_set_is_free(scene_t *s, size_t tid)
 {
     return !(s->boid_set_used[tid/32] & (1<<(tid%32)));
+}
+
+boid_set_t *scene_boid_set_get(scene_t *s, size_t idx)
+{
+    return scene_boid_set_is_free(s, idx)?0:s->boid_set[idx];
 }
 
 int scene_boid_set_create(
@@ -379,7 +379,6 @@ int scene_boid_set_create(
     
     boid_set_t *t = boid_set_init(count, x, y);
     s->boid_set[idx] = t;
-    //  printf("Wee, create boid_set at %d with index %d\n", s->boid_set[idx], idx);
     s->boid_set_count++;
     s->boid_set_search_start = idx+1;
     s->boid_set_used[idx/32] |= (1<<(idx%32));

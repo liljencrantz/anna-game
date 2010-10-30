@@ -28,7 +28,7 @@ function run()
 	       40,0,0)
 --	    else
 	    TreePeer.create(sc.__peer, "tree1", i+5*math.sin(0.1*j), j+5*math.sin(0.1*i), (i*10+j*13)%360, 1);
-	    end
+	 end
       end
    end
 
@@ -36,10 +36,10 @@ function run()
    local framerate = 30
    i=1
    while sc.active do
-
+      
       local now = sc:getRealTime()
       local dt = now-lastTime
-
+      
       framerate = 0.95 * framerate + 0.05/dt
       
       if i % 300 == 0 then
@@ -52,7 +52,7 @@ function run()
       boid.targetX = 100 - 60 * math.cos(sc.time*0.01)
       boid.targetY = 40
       boid.targetZ = sc:getHeight(boid.targetX, boid.targetY)+5
-
+      
       boid:step(sc.__peer, dt)
       sc:render()
       Screen.swapBuffers()

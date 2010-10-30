@@ -245,7 +245,8 @@ int rndc()
 
 void render_trees_leaves(scene_t *s)
 {
-        
+    return;
+    
     glShadeModel( GL_FLAT );
     
     int i;
@@ -255,11 +256,11 @@ void render_trees_leaves(scene_t *s)
     for(i=0; i<scene_tree_get_count(s); i++)
     {
 	tree_t *tree = scene_tree_get(s, i);
-
+	
 	tree->visible = scene_is_visible(s,tree->pos, 3);
 	if(tree->visible)
 	{
-	   render_tree_leaves(s, tree);
+	    render_tree_leaves(s, tree);
 	}
     }
 
@@ -280,12 +281,21 @@ void render_trees_trunk(scene_t *s)
 
 
     int i;
+    int count=0;
     
     for(i=0; i<scene_tree_get_count(s); i++)
     {
 	tree_t *tree = scene_tree_get(s, i);
-	if(tree->visible)
-	    render_tree_trunk(s, tree);
+	if( tree )
+	{
+	    count++;
+	    tree->visible = scene_is_visible(s,tree->pos, 3);
+	    if(tree->visible)
+		render_tree_trunk(s, tree);
+	    if(count >= scene_tree_get_count(s))
+		break;
+	}
+	
     }
     
     //  glDepthMask( GL_TRUE );

@@ -267,14 +267,22 @@ void render_balls(scene_t *s)
 
     glColorMaterial ( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE ) ;
     glEnable ( GL_COLOR_MATERIAL ) ;
-    
-    for(i=0; i<scene_ball_get_count(s); i++)
+
+    int count = 0;    
+    for(i=0;; i++)
     {
 	ball_t *ball = scene_ball_get(s, i);
-	ball->visible = scene_is_visible(s,ball->pos, ball->scale);
-	if(ball->visible)
-	    render_ball(s, ball);
+	if(ball)
+	{
+	    count++;
+	    ball->visible = scene_is_visible(s,ball->pos, ball->scale);
+	    if(ball->visible)
+		render_ball(s, ball);
+	    if(count >= scene_ball_get_count(s))
+		break;
+	}
     }
+    
     glDisable(GL_LIGHT0);
     glDisable( GL_CULL_FACE );
     glDisable(GL_LIGHTING);

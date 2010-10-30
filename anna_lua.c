@@ -444,7 +444,16 @@ static int lua_scene_create (lua_State *L)
     scene_t *res = (scene_t*)lua_newuserdata(L, sizeof(scene_t));
     luaL_getmetatable(L, "ScenePeer");
     lua_setmetatable(L, -2);
+    
+/*    if(lua_isnil(L,1))
+    {
+	
+    }
+    
 
+    char *name = luaL_checkstring(L,1);
+    
+*/
     scene_init(res, luaL_checkint(L, 1), luaL_checknumber(L, 2));
     load_temp_tile_data(res);
     
@@ -626,11 +635,11 @@ void register_types(
 	actor_meta_methods,
 	actor_getters,
 	actor_setters);
-
+    
     static const register_member_t tree_getters[] = {
 	{0,0}
     };
-
+    
     static const register_member_t tree_setters[] = {
 	{0,0}
     };

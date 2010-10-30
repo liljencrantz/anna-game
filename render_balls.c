@@ -27,8 +27,9 @@ static inline void plain_vertex(
     int idx = ball_idx(level, x, y);
     ball_point_t *p=&b->data[idx];
     
-    glColor3f(0.2,0.4,0.1);
-    
+    glColor3ub(b->data[idx].color[0],
+	       b->data[idx].color[1],
+	       b->data[idx].color[2]);
     glNormal3f(
 	ball_normal[idx][0],
 	ball_normal[idx][1],
@@ -56,7 +57,10 @@ static inline void scale_vertex_sub(
     float r2 = b->data[idx2].radius;
     float r3 = b->data[idx3].radius;
     
-    glColor3f(0.2,0.4,0.1);
+    glColor3ub(f1*b->data[idx1].color[0] + ff2*(b->data[idx2].color[0] + b->data[idx3].color[0]),
+	       f1*b->data[idx1].color[1] + ff2*(b->data[idx2].color[1] + b->data[idx3].color[1]),
+	       f1*b->data[idx1].color[2] + ff2*(b->data[idx2].color[2] + b->data[idx3].color[2]));
+
     glNormal3f(
 	n1[0]*f1 + ff2*(n2[0]+n3[0]),
 	n1[1]*f1 + ff2*(n2[1]+n3[1]),
@@ -84,7 +88,9 @@ static inline void scale_vertex1(
     float r1 = b->data[idx1].radius;
     float r2 = b->data[idx2].radius;
     
-    glColor3f(0.2,0.4,0.1);
+    glColor3ub(f1*b->data[idx1].color[0] + f2*b->data[idx2].color[0],
+	       f1*b->data[idx1].color[1] + f2*b->data[idx2].color[1],
+	       f1*b->data[idx1].color[2] + f2*b->data[idx2].color[2]);
     glNormal3f(
 	n1[0]*f1 + f2*n2[0],
 	n1[1]*f1 + f2*n2[1],

@@ -1,7 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
-#include <GL/glew.h>	
+#include <GL/gl.h>	
 
 #define TREE_SECTION_REGULAR 0
 #define TREE_SECTION_JOINT 1

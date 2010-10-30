@@ -9,7 +9,6 @@ Generic utilities library
 #define UTIL_H
 
 #include <math.h>
-#include <string.h>
 
 typedef struct
 {

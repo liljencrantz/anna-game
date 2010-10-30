@@ -1,6 +1,8 @@
 #ifndef ACTOR_H
 #define ACTOR_H
 
+#include "SDL/SDL_opengl.h"
+
 #include "scene.h"
 
 #define ACTION_WALK_FORWARD 1

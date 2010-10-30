@@ -1,9 +1,9 @@
 #include "SDL/SDL.h"
 #include "SDL/SDL_opengl.h"
 
-//#include "render.h"
-//#include "common.h"
-//#include "actor.h"
+#include "render.h"
+#include "common.h"
+#include "actor.h"
 
 SDL_Surface *screen=0;
 
@@ -50,10 +50,10 @@ void screen_swap_buffers()
     //void (*fun)(int);
     //fun=glXGetProcAddress("wglGetSwapIntervalEXT");
     //glXGetSwapIntervalEXT();
-//    if(DRAW)
-//    {
+    if(DRAW)
+    {
 	SDL_GL_SwapBuffers();
-//    }
+    }
 }
 
 void screen_destroy()

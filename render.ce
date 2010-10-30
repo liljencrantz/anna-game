@@ -3,7 +3,7 @@
 #include <strings.h>
 #include <math.h>
 
-#include <GL/glew.h>	
+#include <GL/gl.h>	
 #include <GL/glu.h>	
 
 #include "util.h"

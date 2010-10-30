@@ -3,7 +3,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <GL/glew.h>
-//#include <GL/glew.h>
+//#include <GL/gl.h>
 
 #include "scene.h"
 #include "node.h"
@@ -53,7 +53,6 @@ typedef struct
     int use;
     
 }
-
     render_element_t;
 
 typedef struct 
@@ -101,7 +100,7 @@ static int render_prepare_node(scene_t *s, nid_t nid, float parent_level)
     
     if(!n)
     {
-	return 0;
+	return;
     }
     
     if(scene_nid_is_visible(s, nid, &s->camera))
@@ -653,7 +652,7 @@ void render_data(vertex_data_t *vd)
     glVertexPointer(3, GL_FLOAT, sizeof(vertex_element_t), 0); 
 
     // Describe to OpenGL where the color data is in the buffer
-    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(vertex_element_t), (void *)offsetof(vertex_element_t, color));
+    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(vertex_element_t), offsetof(vertex_element_t, color));
     
     // create index buffer 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vd->ibo); 
@@ -687,12 +686,7 @@ void render_terrain( scene_t *s, vertex_data_t *vd )
     s->grass_offset=(0.5+0.5*cos(s->time*0.1))*sin(s->time*GRASS_WIND_FREQUENCY)*GRASS_WIND_AMPLITUDE;
     
     nid_t root = node_get_root();
-    int node_count;
-    while((node_count= render_prepare_node(s, root, 0.0)) > 3000)
-    {
-	s->render_quality *= 0.95;
-    }
-	
+    int node_count = render_prepare_node(s, root, 0.0);
     vd->idx_count=0;
     vd->vertex_count=0;
     render_node(s, root, vd);    
@@ -721,15 +715,17 @@ void render_terrain_start(scene_t *s)
 {
     if(!s->terrain_state)
     {
-	thread_data_t *td = malloc(sizeof(thread_data_t));
+	s->terrain_state = malloc(sizeof(thread_data_t));
+	thread_data_t *td = s->terrain_state;
 	td->s = s;
-	td->vd.vertex = malloc(sizeof(vertex_element_t)*10*3000);
+	
+	float *vdata = malloc(sizeof(vertex_element_t)*10*3000);
+	td->vd.vertex = vdata;
 	td->vd.index = malloc(sizeof(GLushort)*3000*3*8);
 	td->vd.idx_count=0;
 	td->vd.vertex_count=0;
 	glGenBuffers(1, &(td->vd.vbo));
-	glGenBuffers(1, &(td->vd.ibo));
-	s->terrain_state = td;	
+	glGenBuffers(1, &(td->vd.ibo)); 
 
 /*
     cpu_set_t *cpusetp;

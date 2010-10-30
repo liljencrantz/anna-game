@@ -667,3 +667,11 @@ double get_time()
     return (double)time_struct.tv_sec+((double)time_struct.tv_usec)/1000000.0;
 }
 
+void *allocfn_calloc_fn(void *data, size_t sz) {
+  return calloc(1,sz);
+}
+
+allocfn_t allocfn_calloc = {
+ allocfn_calloc_fn,
+ 0
+};

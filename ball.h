@@ -1,6 +1,8 @@
 #ifndef BALL_H
 #define BALL_H
 
+#include "util.h"
+
 #define BALL_LEVEL_MAX 10
 
 typedef struct
@@ -52,6 +54,6 @@ static inline size_t ball_idx(int level, int x, int y)
 }
 
 void ball_calc(ball_type_t *b);
-ball_type_t *ball_type_create(size_t level);
+ball_type_t *ball_type_create(size_t level, allocfn_t alloc);
 //void ball_type_set(ball_type_t *b, int 
 #endif

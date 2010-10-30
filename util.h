@@ -192,5 +192,13 @@ void pq_destroy(  priority_queue *q );
 /* Returns the number of microseconds since January the 1:st, 1970 */
 double get_time();
 
+typedef struct
+{
+  void *(*fn)(void *data, size_t);
+  void *data;
+}
+allocfn_t;
+
+extern allocfn_t allocfn_calloc;
 
 #endif

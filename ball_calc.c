@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <GL/gl.h>	
 
 #include "scene.h"
 #include "heightmap_element.h"
@@ -11,20 +10,26 @@
 #include "util.h"
 #include "assert.h"
 
+void render_ball_at_level(ball_type_t *t, int level);
+
+
 #define BALL_CALC_NORM 15.0
+
+static float height_factor(int lvl, float fx, float fy)
+{
+    float f = 0.5 - sqrt(pow(0.5-fx,2) + pow(0.5-fy,2)) / sqrt(2);
+    
+    int n = 2 << lvl;
+    float alpha = 2.0 * M_PI/n;
+    float h = cos(alpha);
+    return 1*(1.0-f) + f*h;
+}
 
 static inline void interpolate( ball_type_t *b, int level, int x, int y )
 {
-    memcpy(
-	&b->data[ball_idx(level, x, y)], 
-	&b->data[ball_idx(level+1, x*2, y*2)],
-	sizeof(ball_point_t));
-    return;
-    
-/*
     int i, j;
     int tot_factor = 0;
-    GLfloat height=0.0f;
+    float radius=0.0f;
     int factor_arr[]=
 	{
 	    -1,
@@ -35,53 +40,44 @@ static inline void interpolate( ball_type_t *b, int level, int x, int y )
 	}
     ;
 	
-    int x_pos = HID_GET_X_POS(hid);
-    int y_pos = HID_GET_Y_POS(hid);
     int color[3];
     
+    int side_x = 4 << level;
+    int side_y = 2 << level;
+    ball_point_t *dst = &b->data[ball_idx(level, x, y)];
+
+    float height_factor_arr[] =
+	{
+	    0,0.5,0,0.5,0
+	}
+    ;
+    
+
     for( i=0; i<5; i++ )
     {
-	int x_new = 2*x_pos-2+i;
-	if(x_new < 0 || x_new >= BALL_SUBBALL_HM_PER_BALL(HID_GET_LEVEL(hid)+1))
-	{
-	    continue;
-	}
+	int x_new = (2*x+side_x-2+i)%side_x;
 	for( j=0; j<5; j++ )
 	{
-	    int y_new = 2*y_pos-2+i;
-	    if(y_new < 0 || y_new >= BALL_SUBBALL_HM_PER_BALL(HID_GET_LEVEL(hid)+1))
-	    {
-		continue;
-	    }
+	    int y_new = (2*y-2+i+side_y)%side_y;
+	    ball_point_t *src = &b->data[ball_idx(level+1, x_new, y_new)];
+
+	    int next_factor = factor_arr[i]*factor_arr[j];
+	    tot_factor += next_factor;
+		
+	    radius += (float)next_factor* src->radius / height_factor(level, height_factor_arr[i], height_factor_arr[j]);
+	    color[0] += next_factor * src->color[0];
+	    color[1] += next_factor * src->color[1];
+	    color[2] += next_factor * src->color[2];
+		
 	    
-	    hid_t hid2;
-	    HID_SET(hid2, HID_GET_LEVEL(hid)+1, x_new, y_new);
-	    heightmap_element_t *hm2 = scene_hid_lookup(s, hid2);
-	    if(hm2)
-	    {
-		int next_factor = factor_arr[i]*factor_arr[j];
-		tot_factor += next_factor;
-		
-		height += (float)next_factor* hm2->height;
-		color[0] += next_factor * hm2->color[0];
-		color[1] += next_factor * hm2->color[1];
-		color[2] += next_factor * hm2->color[2];
-		
-	    }
 	}
     }
-    if( tot_factor <= 0 )
-    {
-	return;
-    }	
     
-    height /= (float)tot_factor;		
-    hm->height = height;
-    hm->color[0] = color[0]/tot_factor;
-    hm->color[1] = color[1]/tot_factor;
-    hm->color[2] = color[2]/tot_factor;
-*/
-
+    radius /= (float)tot_factor;		
+    dst->radius=radius;
+    dst->color[0] = color[0]/tot_factor;
+    dst->color[1] = color[1]/tot_factor;
+    dst->color[2] = color[2]/tot_factor;
 } 
 
 /**
@@ -108,55 +104,6 @@ void ball_calc_lod(ball_type_t *b)
     
 }
 
-/*
-static void ball_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat err)
-{
-    int hid_x = HID_GET_X_POS(ohid);
-    int hid_y = HID_GET_Y_POS(ohid);
-    int hid_level = HID_GET_LEVEL(ohid);
-    int w_diff = hid_level-level+1;
-    int nid_x_width=1;
-    int nid_x = hid_x >> w_diff;
-    int nid_y_width=1;
-    int nid_y = hid_y >> w_diff;
-    if((nid_x<<w_diff == hid_x) && nid_x != 0)
-    {
-	nid_x--;
-	nid_x_width=2;
-    }
-    if((nid_y<<w_diff == hid_y) && nid_y != 0)
-    {
-	nid_y--;
-	nid_y_width=2;
-    }
-    int i,j;
-    
-    for(i=0; i<nid_x_width; i++)
-    {
-	for(j=0; j<nid_y_width; j++)
-	{
-	    nid_t nid;
-	    NID_SET(nid, level, nid_x+i, nid_y+j);
-	    t_node_t *n = scene_nid_lookup(s, nid);
-	    n->distortion += powf(err,BALL_CALC_NORM);
-//	    n->distortion = maxf(err, n->distortion);
-	}
-	
-    }
-    
-}
-*/
-
-static float height_factor(int lvl, float fx, float fy)
-{
-    float f = 0.5 - sqrt(pow(0.5-fx,2) + pow(0.5-fy,2)) / sqrt(2);
-    
-    int n = 2 << lvl;
-    float alpha = 2.0 * M_PI/n;
-    float h = cos(alpha);
-    return 1*(1.0-f) + f*h;
-}
-
 
 
 /**
@@ -167,7 +114,7 @@ static float height_factor(int lvl, float fx, float fy)
 static void ball_calc_node_distortion(ball_type_t *b)
 {
 
-    int i, j, lvl, k;
+    int i, j, lvl;
     
     for(i=0; i<b->levels; i++)
     {
@@ -176,7 +123,7 @@ static void ball_calc_node_distortion(ball_type_t *b)
     int count[]={0,0,0,0,0,0,0,0,0};
     
 
-    for(i=0; i< (1<<b->levels); i++)
+    for(i=0; i< (2<<b->levels); i++)
     {
 	for(j=0; j< (1<<(b->levels-1)); j++)
 	{
@@ -247,7 +194,7 @@ static void ball_calc_node_distortion(ball_type_t *b)
     }
 
 }
-
+/*
 static void ball_calc_normal_hid(scene_t *s, hid_t hid)
 {
     int lvl = HID_GET_LEVEL(hid);
@@ -281,7 +228,7 @@ static void ball_calc_normal_hid(scene_t *s, hid_t hid)
     //printf("Normal is %f %f %f\n", normal[0], normal[1], normal[2]);
     
 }
-
+*/
 void ball_calc(ball_type_t *b)
 {
     int i;

@@ -34,3 +34,6 @@ tile_test: $(TILE_OBJS)
 clean:
 	rm -f *.o *.d anna tile_test gmon.out
 .PHONY: clean
+
+tree_branch_data.c: branch.lua
+	lua branch.lua > tree_branch_data.c

@@ -1,0 +1,8 @@
+apt-get install \
+ lua5.1 \
+ lua5.1-doc \
+ liblua5.1-0-dev \
+ libsdl1.2-dev \
+ libsdl-image1.2-dev 
+make
+./anna

@@ -62,6 +62,8 @@ function run()
    sc:generateLod()
    print("LOD generated")
    
+   sc:save()
+
    sc.player = actor.Actor.create(sc, "Bosse");
    sc.camera = {100, 100, 10}
    

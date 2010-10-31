@@ -43,11 +43,6 @@ static size_t scene_allocate_tile(tile_t *t, int lvl)
     for(i=0; i<TILE_SUBTILE_COUNT; i++)
     {
 	size_t sz = sizeof(tile_t);
-	if(lvl == 1)
-	{
-	    sz -= sizeof(tile_t *) * TILE_SUBTILE_COUNT;
-	}
-	
 	res += sz;
 	t->subtile[i] = calloc(1, sz);	
     }
@@ -442,14 +437,50 @@ int scene_boid_set_create(
     return idx;
 }
 
+static void scene_tile_save(tile_t *t, char *dst)
+{
+    char fname[BUFF_SZ];
+    if(snprintf(fname, BUFF_SZ, "%s.atd", dst) < BUFF_SZ)
+    {
+	printf("a\n");
+	FILE *f = fopen(fname, "w");
+	if(f)
+	{
+	    printf("b\n");
+	    size_t written = fwrite(t, sizeof(tile_t), 1, f);
+	    if((fclose(f)==0) && (written == 1))
+	    {
+		printf("c %d\n", written);
+		int i;
+		for(i=0; i<TILE_SUBTILE_COUNT; i++)
+		{
+		    tile_t *st = t->subtile[i];
+		    if(st)
+		    {
+			snprintf(fname, BUFF_SZ, "%s_%d", dst, i);
+			scene_tile_save(st, fname);			
+		    }
+		}
+		return;
+	    }
+	    printf("oops %d\n", written);
+	}
+    }
+    
+    printf("Failed to save tile %s\n", dst);
+    exit(1);
+
+}
+
+
 void scene_save(scene_t *s)
 {
     char dir_name[BUFF_SZ];
-    if(sprintf(dir_name, BUFF_SZ, "data/%s/terrain/tile_0") >= BUFF_SZ)
+    if(snprintf(dir_name, BUFF_SZ, "data/%s/terrain/tile_0", s->name) >= BUFF_SZ)
     {
 	printf("Name too long.\n");
 	exit(1);
     }
-    //tile_save(s->root_node, dir_name);
+    scene_tile_save(s->root_tile, dir_name);
     
 }

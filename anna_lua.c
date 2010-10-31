@@ -24,13 +24,12 @@
 
 static lua_State *L;    
 
-void tile_calc(scene_t *s, int level_count);
+void tile_calc(scene_t *s);
 
 static float florp()
 {
     return 0.09*(((2.0*rand())/RAND_MAX)-1.0);
 }
-
 
 static void tile_diamond(tile_t *t, int lvl, int x1, int y1, int x2, int y2)
 {
@@ -56,7 +55,7 @@ static void tile_diamond(tile_t *t, int lvl, int x1, int y1, int x2, int y2)
 	    hx2y2 = tile_hid_lookup(t,hid(lvl,x2,y2))->height;
 	    hx1y2 = tile_hid_lookup(t,hid(lvl,x1,y2))->height;
 	}
-    
+	
     }
     else if(y2< (2<<lvl))
     {
@@ -126,7 +125,7 @@ static void load_temp_tile_data(scene_t *s)
 	}
 	
     }
-    tile_calc(s, 8);
+    tile_calc(s);
 }
 
 
@@ -293,8 +292,6 @@ static void *check_item (lua_State *L, int index, char *type_name)
     return yd;
 }
 
-
-
 static int lua_actor_create (lua_State *L)
 {
     actor_t *res = (actor_t*)lua_newuserdata(L, sizeof(actor_t));
@@ -302,8 +299,8 @@ static int lua_actor_create (lua_State *L)
     lua_setmetatable(L, -2);    
     res->name = strdup(luaL_checkstring(L, 1));
     res->angle = 45;
-    res->pos[0] = 40;
-    res->pos[1] = 40;
+    res->pos[0] = 210;
+    res->pos[1] = 210;
     return 1;
 }
 
@@ -354,6 +351,7 @@ static int lua_ball_create (lua_State *L)
 
     return 1;
 }
+
 static int lua_boid_set_create (lua_State *L)
 {
     scene_t *s = (scene_t *)lua_topointer(L, 1);
@@ -445,34 +443,96 @@ static int lua_scene_create (lua_State *L)
     luaL_getmetatable(L, "ScenePeer");
     lua_setmetatable(L, -2);
     
-/*    if(lua_isnil(L,1))
-    {
-	
-    }
+    const char *name = luaL_checkstring(L,1);
     
-
-    char *name = luaL_checkstring(L,1);
-    
-*/
-    scene_init(res, luaL_checkint(L, 1), luaL_checknumber(L, 2));
-    load_temp_tile_data(res);
+    scene_init(res, name, lua_toboolean(L, 2));
+//    load_temp_tile_data(res);
     
 //    camera_move(res);    
     res->camera.lr_rot=0;
     res->camera.ud_rot = 65;
-
+    
     return 1;
+}
+
+static int lua_scene_configure(lua_State *L)
+{
+    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_configure(
+	s, 
+	luaL_checkint(L, 2),
+	luaL_checknumber(L, 3));
+        
+    return 0;
+}
+
+
+static int lua_scene_set_terrain_element(lua_State *L)
+{
+    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    hid_t hid;
+
+    int lvl = luaL_checkint(L, 2)-1;
+    int x = luaL_checkint(L, 3)-1;
+    int y = luaL_checkint(L, 4)-1;
+    if((x < 0) || (y < 0) << (x >= (2<<lvl)) || (y >= (2<<lvl)))
+    {
+	return 0;
+    }
+    HID_SET(hid, lvl, x, y);
+    
+//    printf("LALALA %d %d %d\n", luaL_checkint(L, 2), luaL_checkint(L, 3), luaL_checkint(L, 4));
+    
+    heightmap_element_t *he = scene_hid_lookup(s, hid);
+    he->height = luaL_checknumber(L, 5);
+    he->color[0] = 255*luaL_checknumber(L, 6);
+    he->color[1] = 255*luaL_checknumber(L, 7);
+    he->color[2] = 255*luaL_checknumber(L, 8);
+    return 0;
+}
+
+static int lua_scene_get_terrain_element(lua_State *L)
+{
+    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    hid_t hid;
+    int lvl = luaL_checkint(L, 2)-1;
+    int x = luaL_checkint(L, 3)-1;
+    int y = luaL_checkint(L, 4)-1;
+    if((x < 0) || (y < 0) << (x >= (2<<lvl)) || (y >= (2<<lvl)))
+    {
+	return 0;
+    }
+    HID_SET(hid, lvl, x, y);
+        
+    heightmap_element_t *he = scene_hid_lookup(s, hid);
+    lua_pushnumber(L, he->height);    
+    lua_pushnumber(L, (float)he->color[0]/255);    
+    lua_pushnumber(L, (float)he->color[1]/255);    
+    lua_pushnumber(L, (float)he->color[2]/255);    
+    return 4;
+}
+
+
+static int lua_scene_generate_lod(lua_State *L)
+{
+    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    tile_calc(s);    
+    return 0;
+}
+
+
+static int lua_scene_save(lua_State *L)
+{
+    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_save(s);
+    return 0;
 }
 
 
 static int lua_scene_render(lua_State *L)
 {
     scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
-    if(s)
-    {
-	render(s);
-    }
-    
+    render(s);
     return 0;
 }
 
@@ -585,6 +645,11 @@ void register_types(
     static const luaL_reg scene_methods[] = {
 	{"getRealTime", lua_scene_get_real_time},
 	{"create", lua_scene_create},
+	{"configure", lua_scene_configure},
+	{"setTerrainElement", lua_scene_set_terrain_element},
+	{"getTerrainElement", lua_scene_get_terrain_element},
+	{"generateLod", lua_scene_generate_lod},
+	{"save", lua_scene_save},
 	{"render", lua_scene_render},
 	{"getHeight", lua_scene_get_height},
 	{"getSlope", lua_scene_get_slope},

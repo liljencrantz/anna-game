@@ -16,7 +16,15 @@ static inline void interpolate( scene_t * s,
 				hid_t hid )
 {
     heightmap_element_t *hm = scene_hid_lookup(s, hid);
-    assert(hm);
+    if(!hm)
+    {
+	printf(
+	    "Tried to interpolate on element %d %d %d\n",
+	    HID_GET_LEVEL(hid), HID_GET_X_POS(hid), HID_GET_Y_POS(hid));
+	
+	exit(1);
+    }
+    
 
 //	int col_arr[4];
 /*
@@ -170,7 +178,7 @@ static void tile_calc_node_distortion(scene_t *s, int level_count)
 	    GLfloat x_pos = scene_hid_x_coord(s, ohid);
 	    GLfloat y_pos = scene_hid_y_coord(s, ohid);
 	    
-	    for(lvl=level_count-1; lvl >=0; lvl--)
+	    for(lvl=level_count-2; lvl >=0; lvl--)
 	    {
 		GLfloat approx_height = scene_get_height_level(s, lvl, x_pos, y_pos);
 		tile_calc_add_node_error(s, lvl, ohid, fabs(approx_height-org_height));
@@ -190,7 +198,7 @@ static void tile_calc_node_distortion(scene_t *s, int level_count)
 //	printf("Level %d, avg error %.2f\n", i, avg[i]/count);
 	avg[i]=0;
     }
-    printf("\n");
+//    printf("\n");
     
     for( i=level_count-2; i>=0; i-- )
     {
@@ -287,15 +295,68 @@ static void tile_calc_normal(scene_t *s, int level_count)
     
 }
 
-void tile_calc(scene_t *s, int level_count)
+static void tile_calc_validate(scene_t *s)
 {
+    int i, j, k;
+/*
+    for( i=level_count-1; i>=0; i-- )
+    {
+	int nw = 2<<i;
+	for( j=0; j<nw; j++ )
+	{
+	    for( k=0; k<nw; k++ )
+	    {		
+		hid_t hid;
+		HID_SET(hid, i, j, k);
+		heightmap_element_t *he = scene_hid_lookup(s, hid);
+		he->height = level_count-i;
+		he->color[1] = i*255/level_count;
+		
+	    }
+	}
+    }
+*/
+    int lvl = s->level_base-1;
+    
+    int nw = 1<<lvl;
+    for( j=0; j<nw; j++ )
+    {
+	for( k=0; k<nw; k++ )
+	{		
+	    nid_t nid;
+	    NID_SET(nid, lvl, j, k);
+	    t_node_t *n = scene_nid_lookup(s, nid);
+	    if(n->distortion != 0)
+	    {
+		printf("Oops, distortion is %.4f at %d %d %d\n", n->distortion, lvl, j, k);
+		exit(1);
 
-    tile_calc_lod(s, level_count);
+	    }
+	    
+	}
+    }
+    
+    
+}
 
-    nid_t nid;
-    NID_SET(nid, 0, 0, 0);
-    tile_calc_node_distortion(s, level_count);
+void tile_calc(scene_t *s)
+{
+    tile_calc_validate(s);
+    printf("Inbound data is valid\n");
+    tile_calc_lod(s, s->level_base);   
 
-    tile_calc_normal(s, level_count);
 
+
+    printf("LOD data generated\n");
+    tile_calc_node_distortion(s, s->level_base);
+    printf("Distortions calculated\n");
+
+    tile_calc_validate(s);
+    printf("Midpoint data is valid\n");
+
+
+    tile_calc_normal(s, s->level_base);
+    printf("Normals calculated\n");
+    tile_calc_validate(s);
+    printf("Outbound data is valid\n");
 }

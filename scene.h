@@ -14,6 +14,9 @@
 #define SCENE_BALL_MAX 8192
 #define SCENE_BOID_SET_MAX 16
 
+#define SCENE_NAME_MAX 31
+#define SCENE_NAME_SZ (SCENE_NAME_MAX+1)
+
 /**
    The scene object is rather large, because it contains statically
    allocated memory used for storing trees, balls, boids, etc. The
@@ -31,6 +34,8 @@ typedef struct
     float scene_size;
     double time;
     float render_quality;
+    char name[SCENE_NAME_SZ];
+    int load;
     
     view_t camera;	
     
@@ -80,7 +85,16 @@ float scene_get_height( scene_t *s, float xf, float yf );
 void scene_get_slope( scene_t *s, float xf, float yf, float *slope);
 float scene_get_height_level( scene_t *s, int level, float xf, float yf );
 
-void scene_init(scene_t *s, int lb, float scene_size);
+/**
+   Initialize a new scene. If the load flag is set, a background
+   thread will be created that autoloades the relevant bits of scene
+   depending on the camera point.
+ */
+void scene_init(scene_t *s, char *name, int load);
+
+void scene_configure(scene_t *s, int tile_levels, float scene_size);
+void scene_save(scene_t *s);
+
 
 float scene_hid_x_coord(scene_t *s,hid_t hid);
 float scene_hid_y_coord(scene_t *s,hid_t hid);

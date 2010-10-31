@@ -124,10 +124,10 @@ static void render_setup_camera(scene_t *s)
 	    glRotatef( -s->camera.lr_rot+90, 0.0f, 0.0f, 1.0f );	    
 	    glTranslatef( -s->camera.pos[0], -s->camera.pos[1], -s->camera.pos[2] );
 /*	    
-	    printf( "LALALA angle %.2f, pos %.2f %.2f\n", 
+   printf( "LALALA angle %.2f, pos %.2f %.2f\n", 
 		    s->camera.lr_rot,
 		    s->camera.pos[0], s->camera.pos[1]);
-*/	    
+/**/	    
 	}
 #endif	
 	calc_pov( s );

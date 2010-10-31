@@ -11,12 +11,16 @@
 #include "scene.h"
 
 #define RENDER_DISTANCE 130
+#define BUFF_SZ 512
 
-void scene_init( scene_t *s, int lb, float scene_size )
+void scene_init( scene_t *s, char *name, int load )
 {
     memset(s, 0, sizeof(scene_t));
+
+    s->load = load;
+    assert(strlen(name) < SCENE_NAME_MAX);
     
-    s->level_base = lb;
+    strcpy(s->name, name);
     s->sun_pos[0]=-sqrt(0.85);
     s->sun_pos[1]=0.0;
     s->sun_pos[2]=sqrt(0.15);
@@ -24,8 +28,58 @@ void scene_init( scene_t *s, int lb, float scene_size )
     s->ambient_light = 0.5;
     s->sun_light = 1.0;
     
-    s->scene_size = scene_size;
     s->render_quality=40.0;
+    
+}
+
+static size_t scene_allocate_tile(tile_t *t, int lvl)
+{
+    if(!lvl)
+	return 0;
+    int i;
+
+    size_t res=0;
+    
+    for(i=0; i<TILE_SUBTILE_COUNT; i++)
+    {
+	size_t sz = sizeof(tile_t);
+	if(lvl == 1)
+	{
+	    sz -= sizeof(tile_t *) * TILE_SUBTILE_COUNT;
+	}
+	
+	res += sz;
+	t->subtile[i] = calloc(1, sz);	
+    }
+    for(i=0; i<TILE_SUBTILE_COUNT; i++)
+    {
+	res += scene_allocate_tile(t->subtile[i], lvl-1);
+    }
+    return res;
+}
+
+
+void scene_configure( scene_t *s, int lb, float scene_size )
+{
+    s->level_base = lb * TILE_LEVELS;
+    s->scene_size = scene_size;
+
+    printf(
+	"Each tile uses %d bytes for nodes, %d bytes for heightmaps and %d bytes for pointers\n",
+	sizeof(t_node_t) * TILE_NODE_COUNT(TILE_LEVELS),
+	sizeof(heightmap_element_t) * TILE_HM_COUNT(TILE_LEVELS),
+	sizeof(tile_t *) * TILE_SUBTILE_COUNT
+	);
+    
+
+    
+    tile_t *t = calloc(1, sizeof(tile_t));
+    size_t res = scene_allocate_tile(t, lb-1);
+    s->root_tile = t;
+    printf(
+	"%d tiles of %d bytes each allocated. Used a total of %.2f megabytes of memory\n", 
+	res/sizeof(tile_t), sizeof(tile_t),
+	((double)res)/1024/1024);
 }
 
 float scene_hid_x_coord(scene_t *s, hid_t hid)
@@ -58,10 +112,12 @@ static void scene_get_slope_level(
     int x_inc = (base_x < (points_at_level-2));
     float w_inv = points_at_level/s->scene_size;
     
-    if((base_x >= points_at_level-1) ||
-       (base_y >= points_at_level-1) ||
+    if((base_x >= (points_at_level-1)) ||
+       (base_y >= (points_at_level-1)) ||
        !x_inc ||
-       !y_inc)
+       !y_inc ||
+       (base_x < 0) ||
+       (base_y < 0))
     {
 	slope[0]=0;
 	slope[1]=0;
@@ -386,8 +442,14 @@ int scene_boid_set_create(
     return idx;
 }
 
-void save_scene(scene_t *s, char *dir_name)
+void scene_save(scene_t *s)
 {
+    char dir_name[BUFF_SZ];
+    if(sprintf(dir_name, BUFF_SZ, "data/%s/terrain/tile_0") >= BUFF_SZ)
+    {
+	printf("Name too long.\n");
+	exit(1);
+    }
+    //tile_save(s->root_node, dir_name);
     
-
 }

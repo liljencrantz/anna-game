@@ -35,9 +35,14 @@ Scene = wrapper.make(
       
       peer_methods = {
 	 render=0,
+	 configure=0,
 	 getHeight=0,
 	 getSlope=0,
-	 getRealTime=0
+	 getRealTime=0,
+	 save=0,
+	 generateLod=0,
+	 setTerrainElement=0,
+	 getTerrainElement=0
       },
 
       getters = {

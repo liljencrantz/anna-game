@@ -45,25 +45,30 @@ function terrainDiamond(sc, lvl, x1, y1, x2, y2)
 end
 
 function run()
-   local sc = scene.Scene.create("anna", false)
-   sc:configure(2, 200)
+   local sc = nil
+
+   if true then
+      sc = scene.Scene.create("anna", false)
+      sc:configure(2, 200)
    
-   sc:setTerrainElement(8,1,1, 1, 0,1,0)
-   terrainDiamond(
-      sc, 8, 1, 1, (2^8) +1, (2^8) +1)
+      sc:setTerrainElement(8,1,1, 1, 0,1,0)
+      terrainDiamond(
+	 sc, 8, 1, 1, (2^8) +1, (2^8) +1)
 
 --   for i=1,2^8 do
 --      for j=1,2^8 do
 --	 sc:setTerrainElement(8,i, j, math.sin(i*0.1)+math.sin(j*0.1), 0,1,0)
 --      end
 --   end
-   print("Terrain created")
-   
-   sc:generateLod()
-   print("LOD generated")
-   
-   sc:save()
-
+      print("Terrain created")
+      
+      sc:generateLod()
+      print("LOD generated")
+      
+      sc:save()
+   else
+      sc = scene.Scene.create("anna", true)
+   end
    sc.player = actor.Actor.create(sc, "Bosse");
    sc.camera = {100, 100, 10}
    

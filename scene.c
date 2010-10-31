@@ -4,6 +4,7 @@
 #include <math.h>
 #include <assert.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <GL/glew.h>	
 
@@ -13,10 +14,72 @@
 #define RENDER_DISTANCE 130
 #define BUFF_SZ 512
 
+#define SCENE_FORMAT_VERSION 0
+
+typedef struct 
+{
+    pthread_t thread;
+}
+    scene_load_t;
+
+typedef struct
+{
+    int version;
+    int level_base;
+    float scene_size;
+}
+    scene_head_t;
+
+
+static void *scene_load_runner(void *arg)
+{
+    return 0;
+}
+
+
+static void scene_load_init(scene_t *s)
+{
+
+    char fname[BUFF_SZ];
+    if(snprintf(fname, BUFF_SZ, "data/%s/scene.asd", s->name) < BUFF_SZ)
+    {
+
+	FILE *f = fopen(fname, "r");
+	if(f)
+	{
+	    size_t read = fwrite(s, sizeof(scene_head_t), 1, f);
+	    if((fclose(f)==0) && (read == 1))
+	    {
+		return;
+	    }
+	}
+    }
+    printf("Failed to save scene %s\n", s->name);
+    exit(1);
+
+    scene_load_t *sl = (scene_load_t *)s->load_state;
+    
+    int rc = pthread_create(
+	&sl->thread, 
+	0,
+	scene_load_runner, s);
+
+	if(rc)
+	{
+	    printf("ERROR; return code from pthread_create() is %d\n", rc);
+	    exit(1);
+	}
+    
+}
+
+
+
 void scene_init( scene_t *s, char *name, int load )
 {
     memset(s, 0, sizeof(scene_t));
 
+    s->version = SCENE_FORMAT_VERSION;
+    
     s->load = load;
     assert(strlen(name) < SCENE_NAME_MAX);
     
@@ -29,7 +92,11 @@ void scene_init( scene_t *s, char *name, int load )
     s->sun_light = 1.0;
     
     s->render_quality=40.0;
-    
+
+    if(load)
+    {
+	scene_load_init(s);
+    }
 }
 
 static size_t scene_allocate_tile(tile_t *t, int lvl)
@@ -442,15 +509,12 @@ static void scene_tile_save(tile_t *t, char *dst)
     char fname[BUFF_SZ];
     if(snprintf(fname, BUFF_SZ, "%s.atd", dst) < BUFF_SZ)
     {
-	printf("a\n");
 	FILE *f = fopen(fname, "w");
 	if(f)
 	{
-	    printf("b\n");
 	    size_t written = fwrite(t, sizeof(tile_t), 1, f);
 	    if((fclose(f)==0) && (written == 1))
 	    {
-		printf("c %d\n", written);
 		int i;
 		for(i=0; i<TILE_SUBTILE_COUNT; i++)
 		{
@@ -463,7 +527,6 @@ static void scene_tile_save(tile_t *t, char *dst)
 		}
 		return;
 	    }
-	    printf("oops %d\n", written);
 	}
     }
     
@@ -475,12 +538,27 @@ static void scene_tile_save(tile_t *t, char *dst)
 
 void scene_save(scene_t *s)
 {
-    char dir_name[BUFF_SZ];
-    if(snprintf(dir_name, BUFF_SZ, "data/%s/terrain/tile_0", s->name) >= BUFF_SZ)
+    char fname[BUFF_SZ];
+    if(snprintf(fname, BUFF_SZ, "data/%s/scene.asd", s->name) < BUFF_SZ)
     {
-	printf("Name too long.\n");
-	exit(1);
+
+	FILE *f = fopen(fname, "w");
+	if(f)
+	{
+	    size_t written = fwrite(s, sizeof(scene_head_t), 1, f);
+	    if((fclose(f)==0) && (written == 1))
+	    {
+		if(snprintf(fname, BUFF_SZ, "data/%s/terrain/tile_0", s->name) < BUFF_SZ)
+		{
+		    
+		    scene_tile_save(s->root_tile, fname);
+		    return;
+		}
+	    }
+	}
     }
-    scene_tile_save(s->root_tile, dir_name);
+    printf("Failed to save scene %s\n", s->name);
+    exit(1);
     
 }
+

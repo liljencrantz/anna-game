@@ -767,6 +767,7 @@ void render_terrain_finish(scene_t *s)
     pthread_mutex_lock(&render_terrain_mutex);
     glEnable( GL_CULL_FACE );
     thread_data_t *td = s->terrain_state;
+    s->triangle_count += td->vd.idx_count/3;
     render_data(&td->vd);   
     pthread_mutex_unlock(&render_terrain_mutex);
 }

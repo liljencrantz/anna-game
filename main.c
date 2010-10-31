@@ -16,9 +16,13 @@
 #include "actor.h"
 #include "tree.h"
 #include "anna_lua.h" 
+#include "ior.h" 
+
+#define IOR_MEM_USAGE 1024*1024*16
 
 void init()
 {
+//    ior_init(IOR_MEM_USAGE);
     tree_load_init();
     
     if(0)

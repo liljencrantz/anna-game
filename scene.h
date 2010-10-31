@@ -26,12 +26,13 @@
 
 typedef struct
 {
-    tile_t *root_tile;
+    int version;
     int level_base;
+    float scene_size;
+    tile_t *root_tile;
     float sun_pos[3];
     float ambient_light;
     float sun_light;
-    float scene_size;
     double time;
     float render_quality;
     char name[SCENE_NAME_SZ];
@@ -43,9 +44,11 @@ typedef struct
     float grass_offset;
     
     struct actor *player;
+
+    size_t triangle_count;
     
-    void *lua_state;
     void *terrain_state;
+    void *load_state;
     
     tree_t tree[SCENE_TREE_MAX];
     int tree_used[SCENE_TREE_MAX/32];

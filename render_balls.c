@@ -200,12 +200,15 @@ void render_ball(scene_t *s, ball_t *t)
     int side_size = 1<<level;
     int side_size2 = 2<<level;
 
+    s->triangle_count += 2*(1<<level)*(2<<level);
+    
     if(prev_error < BALL_SCALE_THRESHOLD)
     {
 	glBegin(GL_TRIANGLE_STRIP);
 	float f1 = (prev_error - 1.0)/(BALL_SCALE_THRESHOLD-1.0);
 	float f2 = (1.0 - f1);
 	ball_i++;
+
 
 	for(j=1;j<(side_size-1);j++)
 	{    

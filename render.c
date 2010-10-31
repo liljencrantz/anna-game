@@ -136,6 +136,8 @@ static void render_setup_camera(scene_t *s)
 
 void render( scene_t *s )
 {
+    s->triangle_count = 0;
+    
     glPushMatrix();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     render_setup_camera(s);
@@ -148,7 +150,8 @@ void render( scene_t *s )
     render_terrain_finish(s);
     
     glPopMatrix();
-    
+//    printf("Rendered %d tiangles\n", s->triangle_count);
+   
 }
 
 GLfloat render_height_correct(GLfloat a, GLfloat b)

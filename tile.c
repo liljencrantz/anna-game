@@ -43,7 +43,7 @@ t_node_t *tile_nid_lookup(tile_t *tile, nid_t nid)
 	unsigned int y_pos = NID_GET_Y_POS(nid);
 	
 	NID_SET_LEVEL(nid2,NID_GET_LEVEL(nid)-TILE_LEVELS);
-
+	
 	unsigned int len = TILE_SUBTILE_NODE_PER_TILE(NID_GET_LEVEL(nid2));
 	
 	unsigned int subtile_x_pos = x_pos % len;
@@ -51,7 +51,7 @@ t_node_t *tile_nid_lookup(tile_t *tile, nid_t nid)
 	
 	unsigned int subtile_y_pos = y_pos % len;
 	unsigned int subtile_y_idx = y_pos / len;
-
+	
 	NID_SET_POS(nid2, subtile_x_pos, subtile_y_pos);
 	
 	unsigned int subtile_idx = subtile_x_idx + subtile_y_idx*TILE_SUBTILE_COUNT_PER_SIDE;

@@ -137,7 +137,7 @@ static void render_setup_camera(scene_t *s)
 void render( scene_t *s )
 {
     s->triangle_count = 0;
-    
+
     glPushMatrix();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     render_setup_camera(s);

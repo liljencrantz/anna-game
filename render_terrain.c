@@ -30,6 +30,21 @@ typedef struct
     vertex_element_t;
 
 
+static heightmap_element_t fake_element= 
+{
+    0.0, 
+    {
+	0.0,0.0,1.0
+    }
+    ,
+    {
+	0.0,0.0,0.0
+    }
+    
+}
+    ;
+
+
 typedef struct 
 {
     vertex_element_t *vertex;
@@ -241,6 +256,9 @@ static void interpolate_corner(
 		HID_GET_X_POS(main_hid)/2,
 		HID_GET_Y_POS(main_hid)/2);
 	    heightmap_element_t *parent_el = scene_hid_lookup(s, parent_hid);
+	    if(!parent_el)
+		parent_el = &fake_element;
+	    
 	    dest->vertex[0] = scene_hid_x_coord(s, main_hid);
 	    dest->vertex[1] = scene_hid_y_coord(s, main_hid);
 	    dest->vertex[2] = el->height*f + parent_el->height*(1.0-f);
@@ -292,7 +310,7 @@ static void max_used(
 //	    printf("Ok, checking node (%d %d %d), number %d of %d matches at current level.\n", NID_GET_LEVEL(nid[j]), NID_GET_X_POS(nid[j]), NID_GET_Y_POS(nid[j]), j+1, nid_count);
 	    
 	    t_node_t *tmp = scene_nid_lookup(s, nid[j]);
-	    if( tmp->scale > 0.0 && (!*n || tmp->scale < (*n)->scale))
+	    if( tmp && (tmp->scale > 0.0 && (!*n || tmp->scale < (*n)->scale)))
 	    {
 		*n = tmp;
 		done=1;
@@ -308,6 +326,9 @@ static void max_used(
 	    return;
 	}
     }
+    printf("oops\n");
+    exit(1);
+        
 }
 
 static inline void render_calculate_elements(
@@ -328,6 +349,9 @@ static inline void render_calculate_elements(
     {
 	max_used(s, hid[i], &level_arr[i], &hid_max_arr[i], &node_arr[i]);
 	el_arr[i] = scene_hid_lookup(s, hid_max_arr[i]);
+	if(!el_arr[i])
+	    el_arr[i] = &fake_element;
+	
     }
     
     for(i=1;i<MIDDLE_ELEMENT;i+=2)

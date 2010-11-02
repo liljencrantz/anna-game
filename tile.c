@@ -88,7 +88,7 @@ heightmap_element_t *tile_hid_lookup(tile_t *tile, hid_t hid)
 	printf(
 	    "Direct tile hid lookup. %d, %d\n\n",
 	    HID_GET_LEVEL(hid), HID_GET_IDX(hid));
-*/	
+*/
 	return &tile->hm[TILE_HM_OFFSET(HID_GET_LEVEL(hid)) + HID_GET_IDX(hid)];
     }
     else
@@ -131,7 +131,7 @@ heightmap_element_t *tile_hid_lookup(tile_t *tile, hid_t hid)
 	    HID_GET_LEVEL(hid), x_pos, y_pos,
 	    subtile_idx, HID_GET_LEVEL(hid2), subtile_x_pos, subtile_y_pos,
 	    subtile_idx, HID_GET_LEVEL(hid2), HID_GET_IDX(hid2));
-*/	
+*/
 	if(!tile->subtile[subtile_idx])
 	{
 /*	    printf(
@@ -141,7 +141,7 @@ heightmap_element_t *tile_hid_lookup(tile_t *tile, hid_t hid)
 	    return 0;
 	    return &tile_default_he;
 	}
-//	printf("subtile %d\n", subtile_idx);
+//	printf("subtile %d at %d\n", subtile_idx, tile->subtile[subtile_idx]);
 	return tile_hid_lookup(
 	    tile->subtile[subtile_idx],
 	    hid2);

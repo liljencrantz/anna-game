@@ -44,7 +44,7 @@ typedef struct
 
 static tile_t *scene_tile_load(scene_t *s, subtile_t *st)
 {
-    tile_t *t = malloc(sizeof(tile_t));
+    tile_t *t = calloc(1,sizeof(tile_t));
     char fn[BUFF_SZ];
     size_t used=0;
     int i;
@@ -71,11 +71,19 @@ static tile_t *scene_tile_load(scene_t *s, subtile_t *st)
     
     assert(used < BUFF_SZ);
     
-    FILE *f = fopen(fn, "w");
+    FILE *f = fopen(fn, "r");
     assert(f);
-    size_t read = fread(t, sizeof(tile_t), 1, f);
+    size_t read = fread(t, sizeof(tile_t)- sizeof(tile_t *) * TILE_SUBTILE_COUNT, 1, f);
     int cl = fclose(f);
-    assert((cl==0) && (read == 1));
+    if(!((cl==0) && (read == 1)))
+    {
+	printf(
+	    "Error reading file %s. Read %d units, close status was %d\n",
+	    fn, read, cl);
+	
+	exit(1);
+    }
+    
     return t;
 }
 
@@ -207,6 +215,15 @@ static void *scene_load_runner(void *arg)
 static void scene_load_init(scene_t *s)
 {
     char fname[BUFF_SZ];
+    subtile_t st = 
+	{
+	    {
+		0
+	    }
+	    ,1
+	}
+    ;
+    
     if(snprintf(fname, BUFF_SZ, "data/%s/scene.asd", s->name) < BUFF_SZ)
     {
 	FILE *f = fopen(fname, "r");
@@ -215,6 +232,11 @@ static void scene_load_init(scene_t *s)
 	    size_t read = fread(s, sizeof(scene_head_t), 1, f);
 	    if((fclose(f)==0) && (read == 1))
 	    {
+		s->root_tile = scene_tile_load(s, &st);
+		assert(s->root_tile);
+		printf("WEEE\n");
+		
+
 		s->load_state = malloc(sizeof(scene_load_t));
 		scene_load_t *sl = (scene_load_t *)s->load_state;
 		
@@ -729,7 +751,7 @@ static void scene_tile_save(tile_t *t, char *dst)
 	FILE *f = fopen(fname, "w");
 	if(f)
 	{
-	    size_t written = fwrite(t, sizeof(tile_t), 1, f);
+	    size_t written = fwrite(t, sizeof(tile_t) - sizeof(tile_t *) * TILE_SUBTILE_COUNT, 1, f);
 	    if((fclose(f)==0) && (written == 1))
 	    {
 		int i;
@@ -767,7 +789,6 @@ void scene_save(scene_t *s)
 	    {
 		if(snprintf(fname, BUFF_SZ, "data/%s/terrain/tile_0", s->name) < BUFF_SZ)
 		{
-		    
 		    scene_tile_save(s->root_tile, fname);
 		    return;
 		}

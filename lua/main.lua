@@ -47,7 +47,7 @@ end
 function run()
    local sc = nil
 
-   if true then
+   if false then
       sc = scene.Scene.create("anna", false)
       sc:configure(2, 200)
    

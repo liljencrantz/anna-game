@@ -16,9 +16,13 @@
 
 #define SCENE_FORMAT_VERSION 0
 
+#define SUBTILE_LEVEL_MAX 10
+
 typedef struct 
 {
     pthread_t thread;
+    pthread_mutex_t mutex;
+    pthread_cond_t convar;
 }
     scene_load_t;
 
@@ -30,48 +34,219 @@ typedef struct
 }
     scene_head_t;
 
+typedef struct
+{
+    int subtile[SUBTILE_LEVEL_MAX];
+    int subtile_level;    
+}
+    subtile_t;
+
+
+static tile_t *scene_tile_load(scene_t *s, subtile_t *st)
+{
+    tile_t *t = malloc(sizeof(tile_t));
+    char fn[BUFF_SZ];
+    size_t used=0;
+    int i;
+    
+    used += snprintf(
+	fn+used, 
+	BUFF_SZ-used,
+	"data/%s/terrain/tile",
+	s->name);
+    
+    for(i=0; i<st->subtile_level; i++)
+    {
+	used += snprintf(
+	    fn+used, 
+	    BUFF_SZ-used,
+	    "_%d",
+	    st->subtile[i] );
+    }
+        
+    used += snprintf(
+	fn+used, 
+	BUFF_SZ-used,
+	".atd");
+    
+    assert(used < BUFF_SZ);
+    
+    FILE *f = fopen(fn, "w");
+    assert(f);
+    size_t read = fread(t, sizeof(tile_t), 1, f);
+    int cl = fclose(f);
+    assert((cl==0) && (read == 1));
+    return t;
+}
+
+static tile_t **get_tile_address(tile_t *pos, subtile_t *sub, int idx)
+{
+    if( idx == sub->subtile_level-1)
+    {
+	return &pos->subtile[sub->subtile[idx]];
+    }
+    return get_tile_address(pos->subtile[sub->subtile[idx]], sub, idx+1);
+}
+
+static void scene_tile_insert(scene_t *s, tile_t *t, subtile_t *sub)
+{
+    if(sub->subtile_level == 0)
+    {
+	s->root_tile = t;
+    }
+    else
+    {
+	tile_t **destination = get_tile_address(s->root_tile, sub, 0);
+	*destination = t;
+    }
+}
+
+static tile_t *scene_tile_remove(scene_t *s, subtile_t *sub)
+{
+    tile_t *t;
+    if(sub->subtile_level == 0)
+    {
+	t = s->root_tile;
+	s->root_tile = t;
+    }
+    else
+    {
+	tile_t **tp = get_tile_address(s->root_tile, sub, 0);
+	t = *tp;
+	*tp = 0;
+    }
+    return t;
+}
+
+static int scene_find_missing_tile(scene_t *s, subtile_t *sub)
+{
+    return 0;
+}
+
+static int scene_find_unneeded_tile(scene_t *s, subtile_t *sub)
+{
+    return 0;
+}
+
+/*
+  If a tile needs loading, load it, wait for the main thread to allow
+  updates, and insert it, return true.
+  
+  If a tile can be unloaded, wait for the main thread to allow updates
+  and remove it, return true.
+  
+  Otherwise, return false.
+*/
+static int scene_try_load_tile(scene_t *s)
+{
+    scene_load_t *sl = (scene_load_t *)s->load_state;
+    subtile_t sub;
+    if(scene_find_missing_tile(s, &sub))
+    {
+	tile_t *t = scene_tile_load(s, &sub);
+	
+	pthread_mutex_lock(&sl->mutex);
+	pthread_cond_wait(&sl->convar, &sl->mutex);	    
+	scene_tile_insert(s, t, &sub);
+	pthread_mutex_unlock(&sl->mutex);	
+	return 1;
+    }
+
+    if(scene_find_unneeded_tile(s, &sub))
+    {
+	pthread_mutex_lock(&sl->mutex);
+	pthread_cond_wait(&sl->convar, &sl->mutex);	    
+	tile_t *t = scene_tile_remove(s, &sub);
+	pthread_mutex_unlock(&sl->mutex);	
+	free(t);
+	return 1;
+    }
+    
+    return 0;
+}
+
+void scene_update(scene_t *s)
+{
+    scene_load_t *sl = (scene_load_t *)s->load_state;
+    pthread_mutex_lock(&sl->mutex);
+    pthread_cond_signal(&sl->convar);
+    pthread_mutex_unlock(&sl->mutex);
+}
 
 static void *scene_load_runner(void *arg)
 {
+    scene_t *s = (scene_t *)arg;
+    scene_load_t *sl = (scene_load_t *)s->load_state;
+
+    set_current_thread_name("anna (loader)");
+    
+    /*
+      If we have nothing to do, go to sleep for ~half a second, then
+      recheck if we need to load anything.
+      
+      If we actually had something to do, check at once if we can do
+      more.
+    */
+    struct timespec ts = {
+	0,
+	500000
+    };
+    
+    while(1)
+    {
+	if(!scene_try_load_tile(s))
+	{
+	    nanosleep(&ts, 0);
+	}	
+    }
     return 0;
+    
 }
 
 
 static void scene_load_init(scene_t *s)
 {
-
     char fname[BUFF_SZ];
     if(snprintf(fname, BUFF_SZ, "data/%s/scene.asd", s->name) < BUFF_SZ)
     {
-
 	FILE *f = fopen(fname, "r");
 	if(f)
 	{
-	    size_t read = fwrite(s, sizeof(scene_head_t), 1, f);
+	    size_t read = fread(s, sizeof(scene_head_t), 1, f);
 	    if((fclose(f)==0) && (read == 1))
 	    {
+		s->load_state = malloc(sizeof(scene_load_t));
+		scene_load_t *sl = (scene_load_t *)s->load_state;
+		
+		pthread_mutex_init(&sl->mutex, 0);
+		pthread_cond_init(&sl->convar, 0);
+		
+		int rc = pthread_create(
+		    &sl->thread, 
+		    0,
+		    scene_load_runner, s);
+		
+		if(rc)
+		{
+		    printf("ERROR; return code from pthread_create() is %d\n", rc);
+		    exit(1);
+		}
 		return;
 	    }
 	}
     }
-    printf("Failed to save scene %s\n", s->name);
+    printf("Failed to load scene %s\n", s->name);
     exit(1);
-
-    scene_load_t *sl = (scene_load_t *)s->load_state;
-    
-    int rc = pthread_create(
-	&sl->thread, 
-	0,
-	scene_load_runner, s);
-
-	if(rc)
-	{
-	    printf("ERROR; return code from pthread_create() is %d\n", rc);
-	    exit(1);
-	}
-    
 }
 
+void scene_destroy(scene_t *s)
+{
+    if(s->load)
+    {
+	scene_load_t *sl = (scene_load_t *)s->load_state;
+    }
+    
+}
 
 
 void scene_init( scene_t *s, char *name, int load )
@@ -91,7 +266,7 @@ void scene_init( scene_t *s, char *name, int load )
     s->ambient_light = 0.5;
     s->sun_light = 1.0;
     
-    s->render_quality=40.0;
+    s->render_quality=60.0;
 
     if(load)
     {
@@ -136,7 +311,7 @@ void scene_configure( scene_t *s, int lb, float scene_size )
 
     
     tile_t *t = calloc(1, sizeof(tile_t));
-    size_t res = scene_allocate_tile(t, lb-1);
+    size_t res = scene_allocate_tile(t, lb-1) + sizeof(tile_t);
     s->root_tile = t;
     printf(
 	"%d tiles of %d bytes each allocated. Used a total of %.2f megabytes of memory\n", 

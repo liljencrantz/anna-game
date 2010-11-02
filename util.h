@@ -193,5 +193,7 @@ void pq_destroy(  priority_queue *q );
 /* Returns the number of microseconds since January the 1:st, 1970 */
 double get_time();
 
+void set_current_thread_name(char *name);
+
 
 #endif

@@ -700,6 +700,9 @@ void render_terrain( scene_t *s, vertex_data_t *vd )
 
 static void *render_terrain_thread_runner(void *arg)
 {
+    set_current_thread_name("anna (terrain)");
+    
+    
     pthread_mutex_lock(&render_terrain_mutex);
     thread_data_t *d = arg;
     while(1)

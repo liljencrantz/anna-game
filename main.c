@@ -41,6 +41,7 @@ void init()
 
     render_init();    
     anna_lua_init();
+    set_current_thread_name("anna (main)");
 }
 
 int main(int argc, char **argv) 

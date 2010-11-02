@@ -179,7 +179,7 @@ void render_ball(scene_t *s, ball_t *t)
     
     for(level=2; level < t->type->levels; level++)
     {
-	error = t->scale*s->render_quality * t->type->error[level] / (0.0001 + sqrtf(distance_sq))*4;
+	error = t->scale*s->render_quality * t->type->error[level] / (0.0001 + sqrtf(distance_sq))*2;
 	if(error < 1.0)
 	{
 	    break;
@@ -204,6 +204,7 @@ void render_ball(scene_t *s, ball_t *t)
     
     if(prev_error < BALL_SCALE_THRESHOLD)
     {
+
 	glBegin(GL_TRIANGLE_STRIP);
 	float f1 = (prev_error - 1.0)/(BALL_SCALE_THRESHOLD-1.0);
 	float f2 = (1.0 - f1);
@@ -237,7 +238,8 @@ void render_ball(scene_t *s, ball_t *t)
 	    }
 	}	
 	glEnd();
-    }
+  
+  }
     else
     {
 	ball_p++;
@@ -302,10 +304,6 @@ void render_balls_init()
     {
 	int side_size = 1<<level;
 	int side_size2 = 2<<level;
-	printf("Wee prepare level %d, with size %d x %d\n", level, side_size2, side_size);
-//	printf("Level %d starts at offset %d, ends at offset %d\n", ball_point_count(level-1), ball_point_count(level));
-	
-	
 	for(i=0;i<side_size2;i++)
 	{
 	    for(j=0;j<side_size;j++)
@@ -313,9 +311,9 @@ void render_balls_init()
 		ball_normal[ball_idx(level, i, j)][0] = sin(M_PI * j / (side_size-1)) * cos(M_PI * 2 * i / side_size2);
 		ball_normal[ball_idx(level, i, j)][1] = sin(M_PI * j / (side_size-1)) * sin(M_PI * 2 * i / side_size2);
 		ball_normal[ball_idx(level, i, j)][2] = cos(M_PI * j / (side_size-1));
-	    }	
+	    }
 	}
-    }    
+    }
     
 }
 

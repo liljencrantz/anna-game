@@ -4,6 +4,8 @@
 #include <math.h>
 #include <sys/time.h>
 #include <stdarg.h>		
+#include <sys/prctl.h>
+
 
 #include "util.h"
 
@@ -688,4 +690,17 @@ int hash_str_func( void *data )
 		res = (18499*rotl5(res)) ^ *str++;
 	
 	return res;
+}
+
+void set_current_thread_name(char *name)
+{
+    /*
+      Thread name must never be longer than 16 bytes. Them's the rules...
+    */
+    if(strlen(name) > 15)
+    {
+	name[15] = 0;
+    }
+    
+    prctl(PR_SET_NAME, name,0,0,0);
 }

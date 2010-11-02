@@ -1,7 +1,7 @@
 #ifndef BALL_H
 #define BALL_H
 
-#define BALL_LEVEL_MAX 10
+#define BALL_LEVEL_MAX 8
 
 typedef struct
 {

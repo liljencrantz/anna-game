@@ -83,7 +83,7 @@ function run()
 	    bid:setLocation(
 	       sc.__peer, 
 	       x,y,
-	       sc:getHeight(x,y)+3.5,
+	       sc:getHeight(x,y),
 	       40,0,0)
 --	    else
 	    TreePeer.create(sc.__peer, "tree1", i+5*math.sin(0.1*j), j+5*math.sin(0.1*i), (i*10+j*13)%360, 1);

@@ -704,3 +704,13 @@ void set_current_thread_name(char *name)
     
     prctl(PR_SET_NAME, name,0,0,0);
 }
+
+void *allocfn_calloc_fn(void *data, size_t sz) {
+  return calloc(1,sz);
+}
+
+allocfn_t allocfn_calloc = {
+ allocfn_calloc_fn,
+ 0
+};
+

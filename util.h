@@ -49,6 +49,13 @@ typedef struct
 }
 priority_queue;
 
+typedef struct
+{
+  void *(*fn)(void *data, size_t);
+  void *data;
+}
+allocfn_t;
+
 /* Linear algebra functions (in R3) */
 static inline float minf( float a,
 	      float b )
@@ -195,5 +202,11 @@ double get_time();
 
 void set_current_thread_name(char *name);
 
+/*
+  An allocfn wrapper for calloc. This is here to make it reasonably
+  simple to just use libc memory allocation for anna objects that
+  might either want that or be allocated in Lua.
+ */
+extern allocfn_t allocfn_calloc;
 
 #endif

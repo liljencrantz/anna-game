@@ -362,7 +362,15 @@ static void scene_get_slope_level(
     }
         
     HID_SET(hid, level, base_x, base_y);
-    float h1 = scene_hid_lookup(s, hid)->height;
+    heightmap_element_t *he1 = scene_hid_lookup(s, hid);
+    if(!he1)
+    {
+	slope[0]=0;
+	slope[1]=0;
+	return;	
+    }
+    
+    float h1 = he1->height;
     /*
     printf(
 	"LALA2 %.2f %.2f\n",
@@ -372,11 +380,25 @@ static void scene_get_slope_level(
     //return scene_hid_lookup(s, hid)->height;
     
     HID_SET(hid, level, base_x+1, base_y);
-    float h2 = scene_hid_lookup(s, hid)->height;
+    heightmap_element_t *he2 = scene_hid_lookup(s, hid);
+    if(!he2)
+    {
+	slope[0]=0;
+	slope[1]=0;
+	return;	
+    }
+    float h2 = he2->height;
     
     HID_SET(hid, level, base_x, base_y+1);
     
-    float h3 = scene_hid_lookup(s, hid)->height;
+    heightmap_element_t *he3 = scene_hid_lookup(s, hid);
+    if(!he3)
+    {
+	slope[0]=0;
+	slope[1]=0;
+	return;	
+    }
+    float h3 = he3->height;
     
     slope[0] = (h2-h1)*w_inv;
     slope[1] = (h3-h1)*w_inv;
@@ -430,8 +452,13 @@ float scene_get_height_level( scene_t *s, int level, float xf, float yf )
     //printf("Factors: %.2f %.2f\n", f1,f2);
     
     HID_SET(hid, level, base_x, base_y);
+    heightmap_element_t *he = scene_hid_lookup(s, hid);
     //  printf("LALA1 %.2f\n",height);
-    height = (1.0-f1)*(1.0-f2)*scene_hid_lookup(s, hid)->height;
+    if(!he)
+    {
+	return 0;
+    }    
+    height = (1.0-f1)*(1.0-f2)*he->height;
     /*
     printf(
 	"LALA2 %.2f %.2f\n",
@@ -441,14 +468,29 @@ float scene_get_height_level( scene_t *s, int level, float xf, float yf )
     //return scene_hid_lookup(s, hid)->height;
     
     HID_SET(hid, level, base_x+x_inc, base_y);
-    height += (f1)*(1.0-f2)*scene_hid_lookup(s, hid)->height;
+    he = scene_hid_lookup(s, hid);
+    if(!he)
+    {
+	return 0;
+    }    
+    height += (f1)*(1.0-f2)*he->height;
     
     HID_SET(hid, level, base_x, base_y+y_inc);
     
-    height += (1.0-f1)*(f2)*scene_hid_lookup(s, hid)->height;
+    he = scene_hid_lookup(s, hid);
+    if(!he)
+    {
+	return 0;
+    }    
+    height += (1.0-f1)*(f2)*he->height;
     
     HID_SET(hid, level, base_x+x_inc, base_y+y_inc);
-    height += (f1)*(f2)*scene_hid_lookup(s, hid)->height;
+    he = scene_hid_lookup(s, hid);
+    if(!he)
+    {
+	return 0;
+    }    
+    height += (f1)*(f2)*he->height;
     
     return height;
 }

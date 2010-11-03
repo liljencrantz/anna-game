@@ -104,7 +104,7 @@ static void scene_tile_insert(scene_t *s, tile_t *t, subtile_t *sub)
     }
     else
     {
-	tile_t **destination = get_tile_address(s->root_tile, sub, 0);
+	tile_t **destination = get_tile_address(s->root_tile, sub, 1);
 	*destination = t;
     }
 }
@@ -128,6 +128,19 @@ static tile_t *scene_tile_remove(scene_t *s, subtile_t *sub)
 
 static int scene_find_missing_tile(scene_t *s, subtile_t *sub)
 {
+    int i;
+    for(i=0; i<TILE_SUBTILE_COUNT; i++)
+    {
+	if(!s->root_tile->subtile[i])
+	{
+	    sub->subtile[0]=0;
+	    sub->subtile[1]=i;
+	    sub->subtile_level=2;
+	    return 1;
+	}
+	
+    }
+    
     return 0;
 }
 

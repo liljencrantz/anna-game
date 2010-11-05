@@ -61,7 +61,6 @@ Scene = wrapper.make(
       setters = {
 	 player = 
 	    function (self,p)
-	       self.__peer.player = p.__peer
 	       self.__player = p
 	       self.cameraAngle = p.angle
 	    end,
@@ -101,7 +100,7 @@ function Scene:step(dt)
    --self.cameraAngle = self.player.angle
    --self.cameraAngle = 0
    
-   local tpos = self.player.pos
+   local tpos = {self.player.pos[1], self.player.pos[2], self.player.pos[3]}
    tpos[1] = tpos[1] - CAMERA_DISTANCE * math.cos(self.cameraAngle*math.pi/180)
    tpos[2] = tpos[2] - CAMERA_DISTANCE * math.sin(self.cameraAngle*math.pi/180)
    tpos[3] = math.max(tpos[3],self:getHeight(tpos[1],tpos[2])) + 8

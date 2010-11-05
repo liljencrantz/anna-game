@@ -13,7 +13,6 @@
 #include "util.h"
 #include "render.h"
 #include "screen.h"
-#include "actor.h"
 #include "tree.h"
 #include "anna_lua.h" 
 #include "ior.h" 

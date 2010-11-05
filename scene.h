@@ -45,8 +45,6 @@ typedef struct
     float leaf_offset;
     float grass_offset;
     
-    struct actor *player;
-
     size_t triangle_count;
     
     void *terrain_state;

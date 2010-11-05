@@ -1,6 +1,5 @@
 module("actor", package.seeall)
 
-
 animations={
    run= 
       function(actor)
@@ -29,35 +28,16 @@ animations={
       end
 }
 
-Actor = wrapper.make(
-   {
-      getters = {
-	 pos = 
-	    function (self)
+Actor = {}
 
-	       return {
-		  self.__peer.posX,
-		  self.__peer.posY,
-		  self.__peer.posZ
-	       }
-	    end
-      },
-      peer_setters={angle=0},
-      peer_getters={angle=0},
-      peer_methods={},
-      setters = {
-	 pos =
-	    function (self, vec)
-	       self.__peer.posX=vec[1]
-	       self.__peer.posY=vec[2]
-	       self.__peer.posZ=vec[3]
-	    end
-      },
-      
-   })
-
-function Actor:constructor(scene,name)
-   self.__peer  = anna.ActorPeer.create(name)
+function Actor.create(scene,name)
+   local self = {}
+   for key, val in pairs(Actor) do
+--      print("WOOO")
+--      print(key)
+      self[key] = val
+   end
+   
    self.actions = {}
    self.scene=scene
    self.walkSpeed = 8.0
@@ -71,6 +51,8 @@ function Actor:constructor(scene,name)
    self.allAnimations={}
    self.experience = {}
    self.vel={0,0,0}
+   self.pos={0,0,0}
+   return self
 end
 
 function Actor:addExperience(type, amount)
@@ -169,21 +151,24 @@ function Actor:step(dt)
    end
 
    local pos = self.pos
+--   local pos = {
+--      self.pos[1],
+--      self.pos[2],
+--      self.pos[3]}
    pos[1] = pos[1]+vel[1]*dt
    pos[2] = pos[2]+vel[2]*dt
    pos[3] = self.scene:getHeight(pos[1], pos[2])
-
+   
    pos[1] = math.min(math.max(pos[1], 30), self.scene.size-30)
    pos[2] = math.min(math.max(pos[2], 30), self.scene.size-30)
-
-   self.pos = pos
+   
+--   self.pos = pos
    
    self:stepAllAnimations(dt)
    self:animate()
 end
 
 function Actor:animationInit()
-   
    self.body = {
       torso = {
 	 ball=anna.BallPeer.create(
@@ -233,7 +218,6 @@ function Actor:animationInit()
       self.body[partName].ball:setOffset(
 	 self.scene.__peer, unpack(off))
    end      
-
 
    
 end

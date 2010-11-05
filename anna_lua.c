@@ -11,7 +11,6 @@
 #include <lua5.1/lualib.h>
 
 #include "scene.h"
-#include "actor.h"
 #include "tree.h"
 #include "ball.h"
 #include "anna_lua.h"
@@ -292,18 +291,6 @@ static void *check_item (lua_State *L, int index, char *type_name)
     return yd;
 }
 
-static int lua_actor_create (lua_State *L)
-{
-    actor_t *res = (actor_t*)lua_newuserdata(L, sizeof(actor_t));
-    luaL_getmetatable(L, "ActorPeer");
-    lua_setmetatable(L, -2);    
-    res->name = strdup(luaL_checkstring(L, 1));
-    res->angle = 45;
-    res->pos[0] = 210;
-    res->pos[1] = 210;
-    return 1;
-}
-
 static int lua_tree_create (lua_State *L)
 {
     int *res = (int *)lua_newuserdata(L, sizeof(int));
@@ -345,7 +332,7 @@ static int lua_ball_create (lua_State *L)
     lua_setmetatable(L, -2);    
     
     *res = scene_ball_create(
-	(scene_t *)lua_topointer(L, 1),
+	(scene_t *)check_item(L, 1, "ScenePeer"),
 	(char *)luaL_checkstring(L, 2),
 	luaL_checknumber(L, 3));
 
@@ -632,7 +619,6 @@ void register_types(
     };
     
     static const register_member_t scene_setters[] = {
-	{"player",   set_pointer,    offsetof(scene_t,player)   },
 	{"time",          set_double, offsetof(scene_t,time)   },
 	{"renderQuality",   set_float,    offsetof(scene_t,render_quality)   },
 	{"cameraX",   set_float, offsetof(scene_t,camera)+offsetof(view_t,pos)},
@@ -667,39 +653,6 @@ void register_types(
 	scene_meta_methods,
 	scene_getters,
 	scene_setters);
-    
-    static const register_member_t actor_getters[] = {
-	{"angle",  get_float, offsetof(actor_t,angle)   },
-	{"posX",   get_float, offsetof(actor_t,pos)},
-	{"posY",   get_float, offsetof(actor_t,pos)+sizeof(float)},
-	{"posZ",   get_float, offsetof(actor_t,pos)+2*sizeof(float)},
-	{0,0}
-    };
-
-    static const register_member_t actor_setters[] = {
-	{"angle",  set_float, offsetof(actor_t,angle)   },
-	{"posX",   set_float, offsetof(actor_t,pos)},
-	{"posY",   set_float, offsetof(actor_t,pos)+sizeof(float)},
-	{"posZ",   set_float, offsetof(actor_t,pos)+2*sizeof(float)},
-	{0,0}
-    };
-    
-    static const luaL_reg actor_methods[] = {
-	{"create", lua_actor_create},	
-	{0,0}
-    };
-
-    static const luaL_reg actor_meta_methods[] = {
-	{0,0}
-    };
-    
-    register_type(
-	L,
-	"ActorPeer", 
-	actor_methods, 
-	actor_meta_methods,
-	actor_getters,
-	actor_setters);
     
     static const register_member_t tree_getters[] = {
 	{0,0}

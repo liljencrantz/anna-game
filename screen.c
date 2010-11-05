@@ -1,10 +1,6 @@
 #include "SDL/SDL.h"
 #include "SDL/SDL_opengl.h"
 
-//#include "render.h"
-//#include "common.h"
-//#include "actor.h"
-
 SDL_Surface *screen=0;
 
 static int screen_exit=0;

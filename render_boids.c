@@ -8,7 +8,6 @@
 #include "render.h"
 #include "util.h"
 #include "boid.h"
-#include "actor.h"
 
 
 void render_boids(scene_t *s)

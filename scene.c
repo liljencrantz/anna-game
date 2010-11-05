@@ -399,14 +399,14 @@ static void scene_load_init(scene_t *s)
 		s->load_state = malloc(sizeof(scene_load_t));
 		scene_load_t *sl = (scene_load_t *)s->load_state;
 		hash_init(&sl->used, &hash_ptr_func, &hash_ptr_cmp);
-
+		sl->current_lap = 0;
+		
 		while(scene_try_load_tile(s, 0))
 		    ;
-				
+		
 		pthread_mutex_init(&sl->mutex, 0);
 		pthread_cond_init(&sl->convar, 0);
-		
-		
+				
 		int rc = pthread_create(
 		    &sl->thread, 
 		    0,

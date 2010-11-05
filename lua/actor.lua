@@ -3,8 +3,8 @@ module("actor", package.seeall)
 animations={
    run= 
       function(actor)
-	 local phase = math.sin(actor.scene.time*6)
-	 local phase2 = math.sin(actor.scene.time*12)
+	 local phase = math.sin(actor.world.scene.time*6)
+	 local phase2 = math.sin(actor.world.scene.time*12)
 	 return {
 	    leftLeg={0, 60*phase, 0},
 	    rightLeg={0, -60*phase, 0},
@@ -16,7 +16,7 @@ animations={
       end,
    idle= 
       function(actor)
-	 local phase = math.sin(actor.scene.time)
+	 local phase = math.sin(actor.world.scene.time)
 	 return {
 	    leftLeg={0,0,0},
 	    rightLeg={0,0,0},
@@ -30,7 +30,7 @@ animations={
 
 Actor = {}
 
-function Actor.create(scene,name)
+function Actor.create(world,name)
    local self = {}
    for key, val in pairs(Actor) do
 --      print("WOOO")
@@ -39,7 +39,7 @@ function Actor.create(scene,name)
    end
    
    self.actions = {}
-   self.scene=scene
+   self.world=world
    self.walkSpeed = 8.0
    self.reactionSpeed = 10.0
    self.turnSpeed = 250.0
@@ -116,9 +116,9 @@ function Actor:step(dt)
    local vel = self.vel
    local velFactor = self.reactionSpeed*dt
 
-   local slope_x, slope_y = self.scene:getSlope(self.pos[1], self.pos[2])
+   local slope_x, slope_y = self.world.scene:getSlope(self.pos[1], self.pos[2])
    local slope = {slope_x, slope_y}
---   local slope = util.pack(self.scene:getSlope(self.pos[1], self.pos[2]))
+--   local slope = util.pack(self.world.scene:getSlope(self.pos[1], self.pos[2]))
    local dir={math.cos(self.angle*math.pi/180), math.sin(self.angle*math.pi/180)}
 
    local mySlope = util.dot(slope, dir)
@@ -157,10 +157,10 @@ function Actor:step(dt)
 --      self.pos[3]}
    pos[1] = pos[1]+vel[1]*dt
    pos[2] = pos[2]+vel[2]*dt
-   pos[3] = self.scene:getHeight(pos[1], pos[2])
+   pos[3] = self.world.scene:getHeight(pos[1], pos[2])
    
-   pos[1] = math.min(math.max(pos[1], 30), self.scene.size-30)
-   pos[2] = math.min(math.max(pos[2], 30), self.scene.size-30)
+   pos[1] = math.min(math.max(pos[1], 30), self.world.scene.size-30)
+   pos[2] = math.min(math.max(pos[2], 30), self.world.scene.size-30)
    
 --   self.pos = pos
    
@@ -172,41 +172,41 @@ function Actor:animationInit()
    self.body = {
       torso = {
 	 ball=anna.BallPeer.create(
-	    self.scene.__peer, "torso1",0.6),
+	    self.world.scene, "torso1",0.6),
 	 roffset={0,0,0},	 
 	 offset={0,0,1.2}	 
 
       },
       head = {
 	 ball=anna.BallPeer.create(
-	    self.scene.__peer, "head1",0.5),
+	    self.world.scene, "head1",0.5),
 	 roffset={0,0,0.8},
 	 offset={0,0,1.2}	 
 
       },
       leftLeg = {
 	 ball = anna.BallPeer.create(
-	    self.scene.__peer, "leftLeg1",0.4),
+	    self.world.scene, "leftLeg1",0.4),
 	 roffset={0,0,-0.5},
 	 offset={0.0,-0.25,0.5}
       },
 
       rightLeg = {
 	 ball = anna.BallPeer.create(
-	    self.scene.__peer, "rightLeg1",0.4),
+	    self.world.scene, "rightLeg1",0.4),
 	 roffset={0.0,0,-0.5},
 	 offset={0.0,0.25,0.5}
       },
       leftArm = {
 	 ball = anna.BallPeer.create(
-	    self.scene.__peer, "leftArm1",0.3),
+	    self.world.scene, "leftArm1",0.3),
 	 roffset={0,0,-0.4},
 	 offset={0,-0.6,1.5}
       },
 
       rightArm = {
 	 ball = anna.BallPeer.create(
-	    self.scene.__peer, "rightArm1",0.3),
+	    self.world.scene, "rightArm1",0.3),
 	 roffset={0.0,0,-0.4},
 	 offset={0,0.6,1.5}
       }
@@ -216,7 +216,7 @@ function Actor:animationInit()
       local a={0,0,0}
       off = self.body[partName].roffset
       self.body[partName].ball:setOffset(
-	 self.scene.__peer, unpack(off))
+	 self.world.scene, unpack(off))
    end      
 
    
@@ -256,7 +256,7 @@ function Actor:animate()
       local y = off[1]*f2 + off[2]*f1
 
       self.body[partName].ball:setLocation(
-	 self.scene.__peer, 
+	 self.world.scene, 
 	 self.pos[1]+x, self.pos[2]+y, self.pos[3]+off[3], 
 	 self.angle+a[1],a[2],a[3])
 

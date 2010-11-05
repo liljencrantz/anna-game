@@ -1,8 +1,7 @@
 module("anna", package.seeall)
 
 require("lua/util")
-require("lua/wrapper")
-require("lua/scene")
+require("lua/world")
 require("lua/actor")
 require("lua/input")
 require("math")
@@ -45,18 +44,18 @@ function terrainDiamond(sc, lvl, x1, y1, x2, y2)
 end
 
 function run()
-   local sc = nil
+   local w = nil
 
    if false then
-      sc = scene.Scene.create("anna", false)
-      sc:configure(2, 800)
+      w = world.World.create("anna", false)
+      w.scene:configure(2, 800)
       
-      sc:setTerrainElement(
+      w.scene:setTerrainElement(
 	 10,1, 1, 
 	 1,
 	 0,1,0)
       terrainDiamond(
-	 sc, 10, 1, 1, (2^10) +1, (2^10) +1)
+	 w.scene, 10, 1, 1, (2^10) +1, (2^10) +1)
       
 --   for i=1,2^8 do
 --      for j=1,2^8 do
@@ -65,41 +64,41 @@ function run()
 --   end
       print("Terrain created")
       
-      sc:generateLod()
+      w.scene:generateLod()
       print("LOD generated")
       
-      sc:save()
+      w.scene:save()
    else
-      sc = scene.Scene.create("anna", true)
+      w = world.World.create("anna", true)
    end
-   sc.player = actor.Actor.create(sc, "Bosse");
-   sc.camera = {100, 100, 10}
+   w.player = actor.Actor.create(w, "Bosse");
    
-   boid = BoidSetPeer.create(sc.__peer, 40, 40, 40);
+   
+   boid = BoidSetPeer.create(w.scene, 40, 40, 40);
    
    for i = 11, 200, 3 do
       for j = 11, 200, 15 do
 	 if true then
 	    local x = i+5*math.sin(0.1*j)
 	    local y = j+5*math.sin(0.1*i)
-	    bid = BallPeer.create(sc.__peer, "ball1", 1.5)
+	    bid = BallPeer.create(w.scene, "ball1", 1.5)
 	    bid:setLocation(
-	       sc.__peer, 
+	       w.scene, 
 	       x,y,
-	       sc:getHeight(x,y),
+	       w.scene:getHeight(x,y),
 	       40,0,0)
 --	    else
-	    TreePeer.create(sc.__peer, "tree1", i+5*math.sin(0.1*j), j+5*math.sin(0.1*i), (i*10+j*13)%360, 1);
+	    TreePeer.create(w.scene, "tree1", i+5*math.sin(0.1*j), j+5*math.sin(0.1*i), (i*10+j*13)%360, 1);
 	 end
       end
    end
 
-   local lastTime = sc:getRealTime()
+   local lastTime = w.scene:getRealTime()
    local framerate = 30
    i=1
-   while sc.active do
+   while w.active do
       
-      local now = sc:getRealTime()
+      local now = w.scene:getRealTime()
       local dt = now-lastTime
       
       framerate = 0.95 * framerate + 0.05/dt
@@ -107,16 +106,16 @@ function run()
       if i % 300 == 0 then
 	 print("Framerate is " .. framerate)
       end
-      input.handle(sc)
+      input.handle(w)
       Screen.checkInput();
-      sc:step(dt)
+      w:step(dt)
       
-      boid.targetX = 100 - 60 * math.cos(sc.time*0.01)
+      boid.targetX = 100 - 60 * math.cos(w.scene.time*0.01)
       boid.targetY = 40
-      boid.targetZ = sc:getHeight(boid.targetX, boid.targetY)+5
+      boid.targetZ = w.scene:getHeight(boid.targetX, boid.targetY)+5
       
-      boid:step(sc.__peer, dt)
-      sc:render()
+      boid:step(w.scene, dt)
+      w.scene:render()
       Screen.swapBuffers()
       
       lastTime = now

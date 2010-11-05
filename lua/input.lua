@@ -9,22 +9,22 @@ ARROW_RIGHT = 275
 ARROW_UP = 273
 
 
-function handle(scene)
+function handle(world)
    f=anna.Screen.keyGet
    a=actor.actions
-   p = scene.player
+   p = world.player
    
    if f('q') then
-      scene.active=false
+      world.active=false
    end
    if f(48) then
-      scene.renderQuality = scene.renderQuality *1.003
-      print(scene.renderQuality)
+      world.scene.renderQuality = world.scene.renderQuality *1.003
+      print(world.scene.renderQuality)
    end
 
    if f(57) then
-      scene.renderQuality = scene.renderQuality /1.003
-      print(scene.renderQuality)
+      world.scene.renderQuality = world.scene.renderQuality /1.003
+      print(world.scene.renderQuality)
    end
 
    p.actions.walk_forward = f(ARROW_UP)

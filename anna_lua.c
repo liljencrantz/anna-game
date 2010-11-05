@@ -332,7 +332,7 @@ static int lua_ball_create (lua_State *L)
     lua_setmetatable(L, -2);    
     
     *res = scene_ball_create(
-	(scene_t *)check_item(L, 1, "ScenePeer"),
+	(scene_t *)check_item(L, 1, "Scene"),
 	(char *)luaL_checkstring(L, 2),
 	luaL_checknumber(L, 3));
 
@@ -361,7 +361,7 @@ static int lua_boid_set_create (lua_State *L)
 static int lua_boid_step(lua_State *L)
 {
     boid_set_t **t = (boid_set_t **)check_item(L, 1, "BoidSetPeer");
-    scene_t *s = (scene_t *)check_item(L, 2, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 2, "Scene");
     float dt = luaL_checknumber(L, 3);
 /*    printf(
 	"Wee, do step on boid set with index %d, address %d\n", 
@@ -374,7 +374,7 @@ static int lua_boid_step(lua_State *L)
 static int lua_ball_set_location(lua_State *L)
 {
     int *t = (int *)check_item(L, 1, "BallPeer");
-    scene_t *s = (scene_t *)lua_topointer(L, 2);
+    scene_t *s = (scene_t *)check_item(L, 2, "Scene");
     float x = luaL_checknumber(L, 3);
     float y = luaL_checknumber(L, 4);
     float z = luaL_checknumber(L, 5);
@@ -427,7 +427,7 @@ static int lua_ball_destroy(lua_State *L)
 static int lua_scene_create (lua_State *L)
 {
     scene_t *res = (scene_t*)lua_newuserdata(L, sizeof(scene_t));
-    luaL_getmetatable(L, "ScenePeer");
+    luaL_getmetatable(L, "Scene");
     lua_setmetatable(L, -2);
     
     const char *name = luaL_checkstring(L,1);
@@ -444,7 +444,7 @@ static int lua_scene_create (lua_State *L)
 
 static int lua_scene_configure(lua_State *L)
 {
-    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
     scene_configure(
 	s, 
 	luaL_checkint(L, 2),
@@ -456,7 +456,7 @@ static int lua_scene_configure(lua_State *L)
 
 static int lua_scene_set_terrain_element(lua_State *L)
 {
-    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
     hid_t hid;
 
     int lvl = luaL_checkint(L, 2)-1;
@@ -480,7 +480,7 @@ static int lua_scene_set_terrain_element(lua_State *L)
 
 static int lua_scene_get_terrain_element(lua_State *L)
 {
-    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
     hid_t hid;
     int lvl = luaL_checkint(L, 2)-1;
     int x = luaL_checkint(L, 3)-1;
@@ -502,7 +502,7 @@ static int lua_scene_get_terrain_element(lua_State *L)
 
 static int lua_scene_generate_lod(lua_State *L)
 {
-    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
     tile_calc(s);    
     return 0;
 }
@@ -510,7 +510,7 @@ static int lua_scene_generate_lod(lua_State *L)
 
 static int lua_scene_save(lua_State *L)
 {
-    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
     scene_save(s);
     return 0;
 }
@@ -518,14 +518,14 @@ static int lua_scene_save(lua_State *L)
 
 static int lua_scene_render(lua_State *L)
 {
-    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
     render(s);
     return 0;
 }
 
 static int lua_scene_get_height(lua_State *L)
 {
-    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
     
     float x = luaL_checknumber(L, 2);
     float y = luaL_checknumber(L, 3);
@@ -536,7 +536,7 @@ static int lua_scene_get_height(lua_State *L)
 
 static int lua_scene_get_slope(lua_State *L)
 {
-    scene_t *s = (scene_t *)check_item(L, 1, "ScenePeer");
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
     
     float x = luaL_checknumber(L, 2);
     float y = luaL_checknumber(L, 3);
@@ -648,7 +648,7 @@ void register_types(
 
     register_type(
 	L,
-	"ScenePeer", 
+	"Scene", 
 	scene_methods, 
 	scene_meta_methods,
 	scene_getters,

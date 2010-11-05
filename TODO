@@ -6,9 +6,12 @@ Performance:
 
 World
 
-* Start using disk backend for terrain loading
-* Enable world editing in the Lua layer
+* Make disk backend for terrain loading discard unneeded tiles
 * Start supporting multiple ball and tree types
+* Enable better ball and tree editing from Lua
+* Collision objects, e.g. trees
+* Multiple actor objects
+* Clean up Lua bindings - drop the peers and use raw objects directly
 
 Art
 
@@ -17,6 +20,6 @@ Art
 * Stars
 * Finish the first tree type
 * Make a couple more tree types
-
+* Seasons
 
 

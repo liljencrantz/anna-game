@@ -126,25 +126,84 @@ static tile_t *scene_tile_remove(scene_t *s, subtile_t *sub)
     return t;
 }
 
-static int scene_find_missing_tile(scene_t *s, subtile_t *sub)
+static int scene_subtile_x_idx(scene_t *s, int lvl, float pos)
 {
-    int i;
-    for(i=0; i<TILE_SUBTILE_COUNT; i++)
+    int tile_side = 1 << (lvl*TILE_LEVELS);
+    return (pos/s->scene_size)*tile_side;
+}
+
+static int scene_subtile_y_idx(scene_t *s, int lvl, float pos)
+{
+    int tile_side = 1 << (lvl*TILE_LEVELS);
+    return (pos/s->scene_size)*tile_side;
+}
+
+static int scene_subtile_side(scene_t *s, int lvl)
+{
+    return 1 << (lvl*TILE_LEVELS);    
+}
+
+static int scene_subtile_idx(scene_t *s, int lvl, int x, int y)
+{
+    return x + scene_subtile_side(s,lvl)*y;
+    
+}
+
+static int scene_find_missing_tile_from_position(
+    scene_t *s, subtile_t *sub, float *pos, float priority)
+{
+    int lvl, x, y;
+    sub->subtile[0]=0;
+    for(lvl=1; lvl < (s->level_base/TILE_LEVELS); lvl++)
     {
-	if(!s->root_tile->subtile[i])
-	{
-	    sub->subtile[0]=0;
-	    sub->subtile[1]=i;
-	    sub->subtile_level=2;
-	    return 1;
-	}
+	int subtile_radius = 8 * priority;
+	int x_base = scene_subtile_x_idx(s, lvl, pos[0]);
+	int y_base = scene_subtile_y_idx(s, lvl, pos[1]);
+	int subtile_side = scene_subtile_side(s, lvl);
+	sub->subtile_level = lvl+1;
+//	printf("Wop di doo, check level %d, base is %d %d, radius %d\n",
+//	       lvl, x_base, y_base, subtile_radius);
 	
+	
+	for(
+	    x=maxi(0, x_base-subtile_radius);
+	    x <= mini(x_base +subtile_radius, subtile_side-1);
+	    x++)
+	{
+	    for(
+		y=maxi(0, y_base-subtile_radius);
+		y <= mini(y_base +subtile_radius, subtile_side-1);
+		y++)
+	    {
+		//	printf("Check tile %d %d\n", x, y);
+		
+		int idx = scene_subtile_idx(s, lvl, x, y);
+		sub->subtile[lvl] = idx;
+		if(!*get_tile_address(s->root_tile, sub, 1))
+		{
+		    //  printf("Yes\n");
+		    
+		    return 1;
+		}
+	    }
+	    
+	}
     }
     
     return 0;
+    
 }
 
-static int scene_find_unneeded_tile(scene_t *s, subtile_t *sub)
+static int scene_find_missing_tile(
+    scene_t *s, subtile_t *sub)
+{
+    return scene_find_missing_tile_from_position(
+	s, sub, s->camera.pos, 1);
+    
+}
+
+static int scene_find_unneeded_tile(
+    scene_t *s, subtile_t *sub)
 {
     return 0;
 }
@@ -158,7 +217,8 @@ static int scene_find_unneeded_tile(scene_t *s, subtile_t *sub)
   
   Otherwise, return false.
 */
-static int scene_try_load_tile(scene_t *s)
+static int scene_try_load_tile(
+    scene_t *s)
 {
     scene_load_t *sl = (scene_load_t *)s->load_state;
     subtile_t sub;

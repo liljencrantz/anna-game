@@ -49,12 +49,15 @@ function run()
 
    if false then
       sc = scene.Scene.create("anna", false)
-      sc:configure(2, 200)
-   
-      sc:setTerrainElement(8,1,1, 1, 0,1,0)
+      sc:configure(2, 800)
+      
+      sc:setTerrainElement(
+	 10,1, 1, 
+	 1,
+	 0,1,0)
       terrainDiamond(
-	 sc, 8, 1, 1, (2^8) +1, (2^8) +1)
-
+	 sc, 10, 1, 1, (2^10) +1, (2^10) +1)
+      
 --   for i=1,2^8 do
 --      for j=1,2^8 do
 --	 sc:setTerrainElement(8,i, j, math.sin(i*0.1)+math.sin(j*0.1), 0,1,0)

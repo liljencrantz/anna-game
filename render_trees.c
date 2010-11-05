@@ -270,7 +270,7 @@ void render_trees_leaves(scene_t *s)
 
 void render_trees_trunk(scene_t *s)
 {
-
+        
 //    glEnable( GL_TEXTURE_2D );
 //    glEnable( GL_ALPHA_TEST );
     glDisable( GL_BLEND );

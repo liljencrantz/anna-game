@@ -7,7 +7,7 @@
 /**
    Number of node levels in a tile
 */
-#define TILE_LEVELS 4
+#define TILE_LEVELS 5
 #define TILE_SUBTILE_COUNT_PER_SIDE (1<<TILE_LEVELS)
 #define TILE_SUBTILE_NODE_PER_TILE(sublevel) (1<<(sublevel))
 #define TILE_SUBTILE_HM_PER_TILE(sublevel) (2<<(sublevel))

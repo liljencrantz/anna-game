@@ -31,8 +31,8 @@ typedef struct
     float scene_size;
     tile_t *root_tile;
     float sun_pos[3];
-    float ambient_light;
-    float sun_light;
+    float ambient_light[4];
+    float camera_light[4];
     double time;
     float render_quality;
     char name[SCENE_NAME_SZ];
@@ -40,6 +40,8 @@ typedef struct
     
     view_t camera;	
     
+    float target_fps;
+
     float leaf_offset;
     float grass_offset;
     
@@ -92,11 +94,32 @@ float scene_get_height_level( scene_t *s, int level, float xf, float yf );
    Initialize a new scene. If the load flag is set, a background
    thread will be created that autoloades the relevant bits of scene
    depending on the camera point.
+
+   \param load is true in game moad, which enables background loading
+   of game data, and false in editor mode. In editor mode
+   scene_configure must be called to finish the initialization.
  */
 void scene_init(scene_t *s, char *name, int load);
 
+/**
+   Set the number of tile levels and the world size of the scene, and
+   allocate all the memory needed to store things.
+
+   This function must only be called on a scene without background
+   loading, e.g. in editor mode.
+ */
 void scene_configure(scene_t *s, int tile_levels, float scene_size);
+
+/**
+   Save the entire game world to disk. This is potentially very slow.
+ */
 void scene_save(scene_t *s);
+
+/**
+   Allow the loader thread to perform any pending updates to the game world
+ */
+void scene_update(scene_t *s);
+
 
 
 float scene_hid_x_coord(scene_t *s,hid_t hid);

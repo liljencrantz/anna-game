@@ -195,10 +195,10 @@ static void tile_calc_node_distortion(scene_t *s, int level_count)
     }
     for(i=0; i<8; i++)
     {
-//	printf("Level %d, avg error %.2f\n", i, avg[i]/count);
+	printf("Level %d, avg error %.2f\n", i, avg[i]/count);
 	avg[i]=0;
     }
-//    printf("\n");
+    printf("\n");
     
     for( i=level_count-2; i>=0; i-- )
     {

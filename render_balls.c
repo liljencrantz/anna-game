@@ -263,22 +263,19 @@ void render_balls(scene_t *s)
     glEnable(GL_LIGHTING);
     glEnable(GL_RESCALE_NORMAL);
     glShadeModel(GL_SMOOTH);
-
+    
     glEnable(GL_LIGHT0);
 
-
 // Create light components
-    float ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-    float diffuseLight[] = { 0.8f, 0.8f, 0.8, 1.0f };
     
 // Assign created components to GL_LIGHT0
-    glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, s->ambient_light);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, s->camera_light);
     //glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
-
-    glColorMaterial ( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE ) ;
+    
+    glColorMaterial ( GL_FRONT, GL_AMBIENT_AND_DIFFUSE ) ;
     glEnable ( GL_COLOR_MATERIAL ) ;
-
+    
     int count = 0;    
     for(i=0;; i++)
     {

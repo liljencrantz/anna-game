@@ -114,8 +114,9 @@ static int render_prepare_node(scene_t *s, nid_t nid, float parent_level)
     float error;
     int i;
     
+
     if(!n)
-    {
+    {	
 	return 0;
     }
     
@@ -151,7 +152,8 @@ static int render_prepare_node(scene_t *s, nid_t nid, float parent_level)
     return 0;
 }
 
-static void vertex_perspective( scene_t *s, render_element_t *el, float *pos, vertex_data_t *vd, int idx0)
+static void vertex_perspective( 
+    scene_t *s, render_element_t *el, float *pos, vertex_data_t *vd, int idx0)
 {
     float a = el->vertex[0]-pos[0];
     float b = el->vertex[1]-pos[1];
@@ -293,8 +295,7 @@ static void max_used(
     hid_t hid,
     int *level,
     hid_t *h,
-    t_node_t **n
-    )
+    t_node_t **n )
 {
     *n=0;
     
@@ -394,7 +395,7 @@ static inline void render_calculate_elements(
     for(i=0; i<= MIDDLE_ELEMENT; i++)
     {
 	float l = fabs(dot_prod(element[i].direction, element[i].normal, 3));
-	l = s->ambient_light + l*(s->sun_light-s->ambient_light);	
+	l = s->ambient_light[0] + l*(s->camera_light[0]);	
 	element[i].shade = l;	
     }
 }
@@ -696,10 +697,8 @@ void render_data(vertex_data_t *vd)
 	vd->idx_count,
 	GL_UNSIGNED_SHORT,
 	(GLvoid*)((char*)NULL));
-    
-    
+   
 }
-
 
 void render_terrain( scene_t *s, vertex_data_t *vd )
 {
@@ -709,8 +708,10 @@ void render_terrain( scene_t *s, vertex_data_t *vd )
     int node_count;
     while((node_count= render_prepare_node(s, root, 0.0)) > 3000)
     {
+	
 	s->render_quality *= 0.95;
     }
+    //printf("Node count: %d\n", node_count);
 	
     vd->idx_count=0;
     vd->vertex_count=0;

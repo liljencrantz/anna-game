@@ -9,6 +9,7 @@
 #include <GL/glew.h>	
 
 #include "util.h"
+#include "hash_table.h"
 #include "scene.h"
 
 #define RENDER_DISTANCE 130
@@ -18,11 +19,22 @@
 
 #define SUBTILE_LEVEL_MAX 10
 
+/**
+   Time, in seconds, from when a piece of data is no longer deemed
+   needed by the renderer until it will be unloaded.
+ */
+#define SCENE_UNLOAD_GRACE_PERIOD 30
+
 typedef struct 
 {
     pthread_t thread;
     pthread_mutex_t mutex;
     pthread_cond_t convar;
+    /**
+       A hash table storing needed, loadable data.
+     */
+    hash_table_t used;
+    int current_lap;    
 }
     scene_load_t;
 
@@ -153,6 +165,7 @@ static int scene_find_missing_tile_from_position(
     scene_t *s, subtile_t *sub, float *pos, float priority)
 {
     int lvl, x, y;
+    scene_load_t *sl = (scene_load_t *)s->load_state;
     sub->subtile[0]=0;
     for(lvl=1; lvl < (s->level_base/TILE_LEVELS); lvl++)
     {
@@ -163,8 +176,7 @@ static int scene_find_missing_tile_from_position(
 	sub->subtile_level = lvl+1;
 //	printf("Wop di doo, check level %d, base is %d %d, radius %d\n",
 //	       lvl, x_base, y_base, subtile_radius);
-	
-	
+		
 	for(
 	    x=maxi(0, x_base-subtile_radius);
 	    x <= mini(x_base +subtile_radius, subtile_side-1);
@@ -179,12 +191,22 @@ static int scene_find_missing_tile_from_position(
 		
 		int idx = scene_subtile_idx(s, lvl, x, y);
 		sub->subtile[lvl] = idx;
-		if(!*get_tile_address(s->root_tile, sub, 1))
+		tile_t ** tile_ptr = get_tile_address(s->root_tile, sub, 1);
+		
+		if(!*tile_ptr)
 		{
 		    //  printf("Yes\n");
 		    
 		    return 1;
 		}
+		else
+		{
+		    hash_put(
+			&sl->used, 
+			*tile_ptr,
+			(void *)sl->current_lap);
+		}
+		
 	    }
 	    
 	}
@@ -202,10 +224,55 @@ static int scene_find_missing_tile(
     
 }
 
+static int scene_find_unneeded_tile_recursive(
+    scene_t *s, tile_t *t, subtile_t *sub)
+{
+    int i;
+    int has_subtile=0;
+    
+    if(!t)
+	return 0;
+
+    scene_load_t *sl = (scene_load_t *)s->load_state;
+    
+    sub->subtile_level++;
+    
+    if(sub->subtile_level < s->level_base/TILE_LEVELS)
+    {
+	for(i=0; i<TILE_SUBTILE_COUNT; i++)
+	{
+	    tile_t *st = t->subtile[i];
+	    has_subtile |= !!st;
+	    sub->subtile[sub->subtile_level-1]=i;
+	    
+	    if(scene_find_unneeded_tile_recursive(s, st, sub))
+		return 1;
+	}
+    }
+    
+    sub->subtile_level--;
+    
+    if(sub->subtile_level > 0) 
+    {
+	if(!has_subtile)
+	{
+	    if(sl->current_lap - (int)hash_get(&sl->used, t) > SCENE_UNLOAD_GRACE_PERIOD * s->target_fps)
+	    {
+		hash_remove(&sl->used, t, 0, 0);
+		return 1;
+	    }
+	}
+    }
+    
+    return 0;
+}
+
 static int scene_find_unneeded_tile(
     scene_t *s, subtile_t *sub)
 {
-    return 0;
+    sub->subtile_level=0;
+    return scene_find_unneeded_tile_recursive(
+	s, s->root_tile, sub);
 }
 
 /*
@@ -218,27 +285,43 @@ static int scene_find_unneeded_tile(
   Otherwise, return false.
 */
 static int scene_try_load_tile(
-    scene_t *s)
+    scene_t *s, int do_lock)
 {
     scene_load_t *sl = (scene_load_t *)s->load_state;
     subtile_t sub;
     if(scene_find_missing_tile(s, &sub))
     {
 	tile_t *t = scene_tile_load(s, &sub);
+//	printf("Found tile to load %d\n", t);
+	if(do_lock)
+	{
+	    pthread_mutex_lock(&sl->mutex);
+	    pthread_cond_wait(&sl->convar, &sl->mutex);	    
+	}
 	
-	pthread_mutex_lock(&sl->mutex);
-	pthread_cond_wait(&sl->convar, &sl->mutex);	    
 	scene_tile_insert(s, t, &sub);
-	pthread_mutex_unlock(&sl->mutex);	
+	if(do_lock)
+	{
+	    pthread_mutex_unlock(&sl->mutex);	
+	}	
 	return 1;
     }
+//	printf("No tiles needed\n");
 
     if(scene_find_unneeded_tile(s, &sub))
     {
-	pthread_mutex_lock(&sl->mutex);
-	pthread_cond_wait(&sl->convar, &sl->mutex);	    
+	if(do_lock)
+	{
+	    pthread_mutex_lock(&sl->mutex);
+	    pthread_cond_wait(&sl->convar, &sl->mutex);	    
+	}
+	
 	tile_t *t = scene_tile_remove(s, &sub);
-	pthread_mutex_unlock(&sl->mutex);	
+	
+	if(do_lock)
+	{
+	    pthread_mutex_unlock(&sl->mutex);	
+	}
 	free(t);
 	return 1;
     }
@@ -248,17 +331,20 @@ static int scene_try_load_tile(
 
 void scene_update(scene_t *s)
 {
-    scene_load_t *sl = (scene_load_t *)s->load_state;
-    pthread_mutex_lock(&sl->mutex);
-    pthread_cond_signal(&sl->convar);
-    pthread_mutex_unlock(&sl->mutex);
+    if(s->load)
+    {
+	scene_load_t *sl = (scene_load_t *)s->load_state;
+	pthread_mutex_lock(&sl->mutex);
+	pthread_cond_signal(&sl->convar);
+	pthread_mutex_unlock(&sl->mutex);
+    }
 }
 
 static void *scene_load_runner(void *arg)
 {
     scene_t *s = (scene_t *)arg;
     scene_load_t *sl = (scene_load_t *)s->load_state;
-
+    
     set_current_thread_name("anna (loader)");
     
     /*
@@ -270,12 +356,14 @@ static void *scene_load_runner(void *arg)
     */
     struct timespec ts = {
 	0,
-	500000
+	500000000
     };
     
     while(1)
     {
-	if(!scene_try_load_tile(s))
+	sl->current_lap++;
+	
+	if(!scene_try_load_tile(s,1))
 	{
 	    nanosleep(&ts, 0);
 	}	
@@ -292,8 +380,8 @@ static void scene_load_init(scene_t *s)
 	{
 	    {
 		0
-	    }
-	    ,1
+	    },
+	    1
 	}
     ;
     
@@ -307,14 +395,17 @@ static void scene_load_init(scene_t *s)
 	    {
 		s->root_tile = scene_tile_load(s, &st);
 		assert(s->root_tile);
-		printf("WEEE\n");
-		
 
 		s->load_state = malloc(sizeof(scene_load_t));
 		scene_load_t *sl = (scene_load_t *)s->load_state;
-		
+		hash_init(&sl->used, &hash_ptr_func, &hash_ptr_cmp);
+
+		while(scene_try_load_tile(s, 0))
+		    ;
+				
 		pthread_mutex_init(&sl->mutex, 0);
 		pthread_cond_init(&sl->convar, 0);
+		
 		
 		int rc = pthread_create(
 		    &sl->thread, 
@@ -339,8 +430,9 @@ void scene_destroy(scene_t *s)
     if(s->load)
     {
 	scene_load_t *sl = (scene_load_t *)s->load_state;
+	hash_destroy( &sl->used );
+	
     }
-    
 }
 
 
@@ -358,11 +450,18 @@ void scene_init( scene_t *s, char *name, int load )
     s->sun_pos[1]=0.0;
     s->sun_pos[2]=sqrt(0.15);
     
-    s->ambient_light = 0.5;
-    s->sun_light = 1.0;
+    s->ambient_light[0]=0.5;
+    s->ambient_light[1]=0.5;
+    s->ambient_light[2]=0.5;
+    s->ambient_light[3]=1;
+    s->camera_light[0] = 0.5;
+    s->camera_light[1] = 0.5;
+    s->camera_light[2] = 0.5;
+    s->camera_light[3] = 1.0;
     
     s->render_quality=60.0;
-
+    s->target_fps = 60;
+        
     if(load)
     {
 	scene_load_init(s);

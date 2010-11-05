@@ -28,21 +28,6 @@ stack;
 
 typedef struct
 {
-	void *key, *data;
-}
-hash_struct;
-
-typedef struct
-{
-	hash_struct *arr;
-	int count, size;
-	int (*hash_func)(void *key);
-	int (*compare_func)(void *key1, void *key2);
-}
-hash_table;
-
-typedef struct
-{
 	void **arr;
 	int count, size;
 	int (*compare)(void *e1, void *e2);
@@ -147,9 +132,7 @@ float calc_poly( int terms, float *a, float x );
 /* 
  * All the datastuctures below autoresize. The queue, stack and
  * priorityqueue are all impemented using an array and are guaranteed
- * to never be less than 50% full. The hashtable is implemented using
- * a single hashfunction and element storage directly in the array. It
- * is guaranteed to never be more than 75% full or less than 35% full.
+ * to never be less than 50% full. 
 */
 
 /* Queue functions */
@@ -168,23 +151,6 @@ void *stack_pop( stack *s );
 void *stack_peek( stack *s );
 int stack_empty();
 int stack_get_count( stack *s );
-
-/* Hash table functions.
- *
- * Important: The key used to insert data into the hash table must
- * never be the null pointer. The data may be null though, and the
- * hash function can safely return any valid integer.
- */
-void hash_init( hash_table *h,
-				int (*hash_func)(void *key),
-				int (*compare_func)(void *key1, void *key2) );
-void hash_destroy( hash_table *h );
-int hash_put( hash_table *h, void *key, void *data );
-void *hash_get( hash_table *h, void *key );
-int hash_get_count( hash_table *h);
-void *hash_remove( hash_table *h, void *key );
-int hash_contains( hash_table *h, void *key );
-void hash_get_elements( hash_table *h, void ** arr );
 
 /* Priority queue */
 void pq_init( priority_queue *q,

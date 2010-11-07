@@ -35,11 +35,12 @@ typedef struct
 
 struct tree
 {
+    tree_type_t *type;
+
     GLfloat pos[3];
     GLfloat angle;
     GLfloat radius;
     
-    tree_type_t *type;
     GLfloat scale;
     int visible;    
 };

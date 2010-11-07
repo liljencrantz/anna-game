@@ -17,8 +17,6 @@ typedef struct
 }
     nid_t;
 
-#include "heightmap_element.h"
-
 /**
    Return the LOD level portion of the specified nid.
 */
@@ -73,6 +71,8 @@ typedef struct
     GLfloat scale;    
 }
 t_node_t;
+
+#include "heightmap_element.h"
 
 nid_t node_get_root();
 

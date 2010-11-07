@@ -210,7 +210,7 @@ void render_ball(scene_t *s, ball_t *t)
     
     if(prev_error < BALL_SCALE_THRESHOLD)
     {
-
+	
 	glBegin(GL_TRIANGLE_STRIP);
 	float f1 = (prev_error - 1.0)/(BALL_SCALE_THRESHOLD-1.0);
 	float f2 = (1.0 - f1);
@@ -280,7 +280,7 @@ void render_balls(scene_t *s)
     for(i=0;; i++)
     {
 	ball_t *ball = scene_ball_get(s, i);
-	if(ball)
+	if(ball && ball->type)
 	{
 	    count++;
 	    ball->visible = scene_is_visible(s,ball->pos, ball->scale);

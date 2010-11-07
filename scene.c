@@ -13,7 +13,6 @@
 #include "scene.h"
 
 #define RENDER_DISTANCE 130
-#define BUFF_SZ 512
 
 #define SCENE_FORMAT_VERSION 0
 
@@ -52,7 +51,6 @@ typedef struct
     int subtile_level;    
 }
     subtile_t;
-
 
 static tile_t *scene_tile_load(scene_t *s, subtile_t *st)
 {
@@ -306,6 +304,25 @@ static int scene_try_load_tile(
 	}	
 	return 1;
     }
+    
+/*    
+    int idx = scene_find_missing_item_tile(s);
+    if(idx != SCENE_NONE)
+    {
+	void *d = scene_load_item_tile(s, idx);
+	if(do_lock)
+	{
+	    pthread_mutex_lock(&sl->mutex);
+	    pthread_cond_wait(&sl->convar, &sl->mutex);	    
+	}
+	scene_item_tile_insert(s, d);
+	if(do_lock)
+	{
+	    pthread_mutex_unlock(&sl->mutex);	
+	}	
+	return 1;
+    }
+*/  
 //	printf("No tiles needed\n");
 
     if(scene_find_unneeded_tile(s, &sub))
@@ -450,6 +467,8 @@ void scene_init( scene_t *s, char *name, int load )
     s->sun_pos[1]=0.0;
     s->sun_pos[2]=sqrt(0.15);
     
+    hash_init( &s->ball_type, &hash_str_func, &hash_str_cmp);
+
     s->ambient_light[0]=0.5;
     s->ambient_light[1]=0.5;
     s->ambient_light[2]=0.5;
@@ -511,20 +530,6 @@ void scene_configure( scene_t *s, int lb, float scene_size )
 	"%d tiles of %d bytes each allocated. Used a total of %.2f megabytes of memory\n", 
 	res/sizeof(tile_t), sizeof(tile_t),
 	((double)res)/1024/1024);
-}
-
-float scene_hid_x_coord(scene_t *s, hid_t hid)
-{
-    int idx = HID_GET_X_POS(hid);
-    int max = (2<<HID_GET_LEVEL(hid));
-    return (s->scene_size * idx) / max;
-}
-
-float scene_hid_y_coord(scene_t *s, hid_t hid)
-{
-    int idx = HID_GET_Y_POS(hid);
-    int max = (2<<HID_GET_LEVEL(hid));
-    return (s->scene_size * idx) / max;
 }
 
 static void scene_get_slope_level( 
@@ -846,6 +851,22 @@ ball_t *scene_ball_get(scene_t *s, size_t idx)
     return scene_ball_free(s, idx)?0:&s->ball[idx];
 }
 
+void scene_ball_type_get(scene_t *s, char *n, ball_type_t ** pos)
+{
+    ball_type_t *t = hash_get(&s->ball_type, n);
+    if(t)
+    {
+	*pos = t;
+    }
+    else
+    {
+	t = ball_type_load(s->name, n);
+	hash_put(&s->ball_type, n, t);
+	*pos = t;
+    }
+    
+}
+
 int scene_ball_create(
     scene_t *s,
     char *ball_type_name,
@@ -858,7 +879,8 @@ int scene_ball_create(
     ball_t *t = &s->ball[idx];
     
     //printf("Create ball at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
-    t->type = ball_type_get(ball_type_name);
+    
+    scene_ball_type_get(s, ball_type_name, &(t->type));
     t->scale = scale;
     
     s->ball_count++;
@@ -867,9 +889,6 @@ int scene_ball_create(
     
     return idx;
 }
-
-
-
 
 
 void scene_boid_set_destroy(
@@ -946,8 +965,7 @@ static void scene_tile_save(tile_t *t, char *dst)
 
 }
 
-
-void scene_save(scene_t *s)
+void scene_save_terrain(scene_t *s)
 {
     char fname[BUFF_SZ];
     if(snprintf(fname, BUFF_SZ, "data/%s/scene.asd", s->name) < BUFF_SZ)

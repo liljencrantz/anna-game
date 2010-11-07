@@ -47,6 +47,6 @@ int main(int argc, char **argv)
 {  
     init();	
     anna_lua_run();
-    return 1;
+    return 0;
 }
 

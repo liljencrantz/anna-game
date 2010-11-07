@@ -13,7 +13,7 @@
 void render_ball_at_level(ball_type_t *t, int level);
 
 
-#define BALL_CALC_NORM 15.0
+#define BALL_TYPE_CALC_NORM 15.0
 
 static float height_factor(int lvl, float fx, float fy)
 {
@@ -85,7 +85,7 @@ static inline void interpolate( ball_type_t *b, int level, int x, int y )
    interpolated height of that heightmap element based on the height
    of the underlying elements.
 */
-void ball_calc_lod(ball_type_t *b)
+void ball_type_calc_lod(ball_type_t *b)
 {
     
     int i, j, k;
@@ -111,7 +111,7 @@ void ball_calc_lod(ball_type_t *b)
    coefficient to use when calculating the error obtained by using the
    specified node instead of the leaf node.
  */
-static void ball_calc_node_distortion(ball_type_t *b)
+static void ball_type_calc_node_distortion(ball_type_t *b)
 {
 
     int i, j, lvl;
@@ -195,7 +195,7 @@ static void ball_calc_node_distortion(ball_type_t *b)
 
 }
 /*
-static void ball_calc_normal_hid(scene_t *s, hid_t hid)
+static void ball_type_calc_normal_hid(scene_t *s, hid_t hid)
 {
     int lvl = HID_GET_LEVEL(hid);
     int x = HID_GET_X_POS(hid);
@@ -229,21 +229,12 @@ static void ball_calc_normal_hid(scene_t *s, hid_t hid)
     
 }
 */
-void ball_calc(ball_type_t *b)
+void ball_type_calc(ball_type_t *b)
 {
     int i;
     
-    ball_calc_lod(b);
-    ball_calc_node_distortion(b);
+    ball_type_calc_lod(b);
+    ball_type_calc_node_distortion(b);
 
-    glEnable( GL_CULL_FACE );	
-    b->list_index = glGenLists(b->levels);
-    for(i=0;i<b->levels; i++)
-    {
-	glNewList(b->list_index+i, GL_COMPILE);
-	render_ball_at_level(b, i);
-	glEndList();
-    }
-    
-
+    ball_type_prerender(b);
 }

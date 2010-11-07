@@ -156,8 +156,3 @@ void render( scene_t *s )
    
 }
 
-GLfloat render_height_correct(GLfloat a, GLfloat b)
-{
-    return -0.002*(a*a+b*b);
-}
-

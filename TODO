@@ -2,11 +2,11 @@ Performance:
 
 * Use VBOs with primitive restart to render interpolated balls.
 * Move ball interpolation into separate thread.
-* Create a separate AI thread?
+* Move rendering into separate thread, reserve main thread for AI, physics, etc.
 
 World
 
-* Make disk backend for terrain loading discard unneeded tiles
+* Loading and unloading of tiles for trees and other items
 * Start supporting multiple ball and tree types
 * Enable better ball and tree editing from Lua
 * Collision objects, e.g. trees

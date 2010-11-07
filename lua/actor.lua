@@ -52,6 +52,9 @@ function Actor.create(world,name)
    self.experience = {}
    self.vel={0,0,0}
    self.pos={0,0,0}
+
+   table.insert(world.steppable, self)
+   
    return self
 end
 

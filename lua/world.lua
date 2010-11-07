@@ -13,21 +13,25 @@ function World.create(name, load)
    end
    self.scene = anna.Scene.create(name, load)
    self.active = true
-
+   
    self.scene.cameraX = 40
    self.scene.cameraY = 40
    self.scene.cameraZ = 500
 
+   self.steppable = {}
+
    return self
 end
-
 
 function World:step(dt)
    self.scene.time = self.scene.time + dt
    acs = 1.0 - 0.3*dt
 
+   for _,item in ipairs(self.steppable) do
+      item:step(dt)
+   end
+
    if self.player then
-      self.player:step(dt)
       
       
       if self.player.actions.walk_forward then
@@ -46,10 +50,10 @@ function World:step(dt)
 	 else
 	    ca = acs*ca + (1.0-acs)*pa
 	 end
-	 self.cameraAngle = ca
+	 self.scene.cameraAngle = ca
       end
-      --self.cameraAngle = self.player.angle
-      --self.cameraAngle = 0
+      --self.scene.cameraAngle = self.player.angle
+      --self.scene.cameraAngle = 0
       
       local tpos = {self.player.pos[1], self.player.pos[2], self.player.pos[3]}
       tpos[1] = tpos[1] - CAMERA_DISTANCE * math.cos(self.scene.cameraAngle*math.pi/180)

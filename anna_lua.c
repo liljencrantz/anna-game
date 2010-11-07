@@ -24,110 +24,6 @@
 static lua_State *L;    
 
 void tile_calc(scene_t *s);
-
-static float florp()
-{
-    return 0.09*(((2.0*rand())/RAND_MAX)-1.0);
-}
-
-static void tile_diamond(tile_t *t, int lvl, int x1, int y1, int x2, int y2)
-{
-//    printf("!!! %d %d %d %d", x1,y1,x2,y2);    
-    if((x2-x1) < 2)
-	return;
-    if((y2-y1) < 2)
-	return;
-    
-    int xm = (x1+x2)/2;
-    int ym = (y1+y2)/2;
-    float xd = x2-x1;
-    float yd = y2-y1;
-
-    float hx1y1=0, hx2y1=0, hx1y2=0,hx2y2=0;
-    hx1y1 = tile_hid_lookup(t,hid(lvl,x1,y1))->height;
-    if( x2 < (2<<lvl))
-    {
-	hx2y1 = tile_hid_lookup(t,hid(lvl,x2,y1))->height;
-	
-	if(y2< (2<<lvl))
-	{
-	    hx2y2 = tile_hid_lookup(t,hid(lvl,x2,y2))->height;
-	    hx1y2 = tile_hid_lookup(t,hid(lvl,x1,y2))->height;
-	}
-	
-    }
-    else if(y2< (2<<lvl))
-    {
-	hx1y2 = tile_hid_lookup(t,hid(lvl,x1,y2))->height;
-    }
-    
-    tile_hid_lookup(t,hid(lvl,xm,y1))->height =
-	(hx1y1+hx2y1)*0.5+
-	florp()*(xd);
-    tile_hid_lookup(t,hid(lvl,x1,ym))->height =
-	(hx1y1+hx1y2)*0.5+
-	florp()*(yd);
-    tile_hid_lookup(t,hid(lvl,xm,ym))->height =
-	(hx1y1+hx2y1+hx1y2+hx2y2)*0.25+
-	florp()*(xd);
-    tile_diamond(t,lvl, xm,ym,x2,y2);
-    tile_diamond(t,lvl, x1,ym,xm,y2);
-    tile_diamond(t,lvl, xm,y1,x2,ym);
-    tile_diamond(t,lvl, x1,y1,xm,ym);
-}
-
-
-static void load_temp_tile_data(scene_t *s)
-{
-    tile_t *t = calloc(1, sizeof(tile_t));
-    s->root_tile=t;
-    int i, j;
-    
-    for(i=0; i<TILE_SUBTILE_COUNT; i++)
-    {
-	t->subtile[i] = calloc(1, sizeof(tile_t));
-    }
-    
-    tile_diamond(t, 7, 0, 0, (2<<7), (2<<7));    
-
-    for(i=0; i<(2<<7); i++)
-    {
-	for(j=0; j<(2<<7); j++)
-	{
-	    hid_t hid;
-	    HID_SET(hid, 7, i, j);
-	    //printf("%d %d\n", i,j);
-	    assert(i == HID_GET_X_POS(hid));
-	    assert(j == HID_GET_Y_POS(hid));
-	    
-	    tile_hid_lookup(t,hid)->height += (sin(0.3*(i+0.5*sin(j)))*sin(0.3*j+0.5*sin(i))) * 1.5;
-	    //tile_hid_lookup(t,hid)->height = 2;//(sin(0.3*i)*sin(0.3*j)) * (1.5 + sin(0.1*(i))*sin(0.1*j)) + 0.05*(sin(3.0*i)*sin(3.0*j))+ 0.1*(sin(1.1*i)*sin(1.1*j));
-	    tile_hid_lookup(t,hid)->color[0] = 42;
-	    tile_hid_lookup(t,hid)->color[1] = 84;
-	    tile_hid_lookup(t,hid)->color[2] = 42;
-	    
-	    //printf("%d\n", hid.id, fabs(tile_hid_lookup(t,hid)->height - (0.0*sin(0.1*i)+0*sin(0.2*j)+0.1*i)));
-	    
-//	    assert(fabs(tile_hid_lookup(t,hid)->height - (0.0*sin(0.1*i)+0*sin(0.2*j)+0.1*i)) < 0.001);
-	}
-	
-    }
-    for(i=0; i<(2<<7); i++)
-    {
-	for(j=0; j<(2<<7); j++)
-	{
-	    hid_t hid;
-	    HID_SET(hid, 7, i, j);
-//	    printf("%d %d %f %f\n", i, j, tile_hid_lookup(t,hid)->height, (0.0*sin(0.1*i)+0*sin(0.2*j)+0.1*i));
-
-//	    assert(fabs(tile_hid_lookup(t,hid)->height - (0.0*sin(0.1*i)+0*sin(0.2*j)+0.1*i)) < 0.001);
-	}
-	
-    }
-    tile_calc(s);
-}
-
-
 /*
 static int get_int (lua_State *L, void *v)
 {
@@ -339,6 +235,64 @@ static int lua_ball_create (lua_State *L)
     return 1;
 }
 
+static int lua_ball_type_create (lua_State *L)
+{
+    ball_type_t **res = (ball_type_t **)lua_newuserdata(L, sizeof(ball_type_t *));
+    luaL_getmetatable(L, "BallType");
+    lua_setmetatable(L, -2);    
+    
+    *res = ball_type_create(
+	luaL_checknumber(L, 1),
+	allocfn_calloc);
+    
+    return 1;
+}
+
+static int lua_ball_type_set_element(lua_State *L)
+{
+    ball_type_t **t = (ball_type_t **)check_item(L, 1, "BallType");
+
+    int x = luaL_checkint(L, 2)-1;
+    int y = luaL_checkint(L, 3)-1;
+
+    float h = luaL_checknumber(L, 4);
+
+    float r = luaL_checknumber(L, 5);
+    float g = luaL_checknumber(L, 6);
+    float b = luaL_checknumber(L, 7);
+    
+    int l = (*t)->levels;
+    int idx = ball_idx(l,x,y);
+
+//    printf("Set %d %d -> %d\n", x,y,idx);
+    
+
+    (*t)->data[idx].radius = h;
+    (*t)->data[idx].color[0] = r*255;
+    (*t)->data[idx].color[1] = g*255;
+    (*t)->data[idx].color[2] = b*255;
+        
+    return 0;
+}
+
+static int lua_ball_type_calc(lua_State *L)
+{
+    ball_type_t **t = (ball_type_t **)check_item(L, 1, "BallType");
+    ball_type_calc(*t);
+    return 0;
+}
+
+
+static int lua_ball_type_save(lua_State *L)
+{
+    ball_type_t **t = (ball_type_t **)check_item(L, 1, "BallType");
+    char *dname = (char *)luaL_checkstring(L, 2);
+    char *name = (char *)luaL_checkstring(L, 3);
+    ball_type_save(*t, dname, name);
+    return 0;
+}
+
+
 static int lua_boid_set_create (lua_State *L)
 {
     scene_t *s = (scene_t *)lua_topointer(L, 1);
@@ -508,10 +462,10 @@ static int lua_scene_generate_lod(lua_State *L)
 }
 
 
-static int lua_scene_save(lua_State *L)
+static int lua_scene_save_terrain(lua_State *L)
 {
     scene_t *s = (scene_t *)check_item(L, 1, "Scene");
-    scene_save(s);
+    scene_save_terrain(s);
     return 0;
 }
 
@@ -635,7 +589,7 @@ void register_types(
 	{"setTerrainElement", lua_scene_set_terrain_element},
 	{"getTerrainElement", lua_scene_get_terrain_element},
 	{"generateLod", lua_scene_generate_lod},
-	{"save", lua_scene_save},
+	{"saveTerrain", lua_scene_save_terrain},
 	{"render", lua_scene_render},
 	{"getHeight", lua_scene_get_height},
 	{"getSlope", lua_scene_get_slope},
@@ -708,6 +662,34 @@ void register_types(
 	ball_meta_methods,
 	ball_getters,
 	ball_setters);
+
+    static const register_member_t ball_type_getters[] = {
+	{0,0}
+    };
+
+    static const register_member_t ball_type_setters[] = {
+	{0,0}
+    };
+    
+    static const luaL_reg ball_type_methods[] = {
+	{"create", lua_ball_type_create},	
+	{"setElement", lua_ball_type_set_element},	
+	{"save", lua_ball_type_save},	
+	{"calc", lua_ball_type_calc},	
+	{0,0}
+    };
+
+    static const luaL_reg ball_type_meta_methods[] = {
+	{0,0}
+    };
+    
+    register_type(
+	L,
+	"BallType", 
+	ball_type_methods, 
+	ball_type_meta_methods,
+	ball_type_getters,
+	ball_type_setters);
 
     static const register_member_t screen_getters[] = {
 	{0,0}

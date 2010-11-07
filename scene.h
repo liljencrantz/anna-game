@@ -9,6 +9,7 @@
 #include "tree.h"
 #include "ball.h"
 #include "boid.h"
+#include "hash_table.h"
 
 #define SCENE_TREE_MAX 4096
 #define SCENE_BALL_MAX 8192
@@ -16,6 +17,8 @@
 
 #define SCENE_NAME_MAX 31
 #define SCENE_NAME_SZ (SCENE_NAME_MAX+1)
+
+#define BUFF_SZ 512
 
 /**
    The scene object is rather large, because it contains statically
@@ -49,6 +52,8 @@ typedef struct
     
     void *terrain_state;
     void *load_state;
+    
+    hash_table_t ball_type;
     
     tree_t tree[SCENE_TREE_MAX];
     int tree_used[SCENE_TREE_MAX/32];
@@ -111,17 +116,32 @@ void scene_configure(scene_t *s, int tile_levels, float scene_size);
 /**
    Save the entire game world to disk. This is potentially very slow.
  */
-void scene_save(scene_t *s);
+void scene_save_terrain(scene_t *s);
 
 /**
    Allow the loader thread to perform any pending updates to the game world
  */
 void scene_update(scene_t *s);
 
+/**
+   Calculate the x coordinate of the specified hid 
+*/
+static inline float scene_hid_x_coord(scene_t *s, hid_t hid)
+{
+    int idx = HID_GET_X_POS(hid);
+    int max = (2<<HID_GET_LEVEL(hid));
+    return (s->scene_size * idx) / max;
+}
 
-
-float scene_hid_x_coord(scene_t *s,hid_t hid);
-float scene_hid_y_coord(scene_t *s,hid_t hid);
+/**
+   Calculate the y coordinate of the specified hid 
+*/
+static inline float scene_hid_y_coord(scene_t *s, hid_t hid)
+{
+    int idx = HID_GET_Y_POS(hid);
+    int max = (2<<HID_GET_LEVEL(hid));
+    return (s->scene_size * idx) / max;
+}
 
 /**
    Returns the position of the middle of the specified node.
@@ -135,22 +155,38 @@ float scene_nid_min_distance(scene_t *s, nid_t nid, view_t *pos);
 
 float scene_nid_radius(scene_t *s, nid_t nid);
 
-
+/**
+   Check if the terrain node with the specified nid is visible
+ */
 int scene_nid_is_visible(scene_t *s, nid_t nid, view_t *pos);
 
+/**
+   Check if any part of an object located at the specified point and
+   with the maximum radious specified is visible.
+ */
 int scene_is_visible(scene_t *s, float *pos, float radius);
 
-//void get_nabla_height( scene_t *s, float xf, float yf, float *arr );
-
-//tile_t *get_tile( scene_t *s, int x, int y );
-//int get_tile_count( scene_t *s );
-//void get_all_tiles( scene_t *s, tile_t ** );
-
+/**
+   Remove the tree with the specified id from the scene
+ */
 void scene_tree_destroy(
     scene_t *s, 
     int tid);
+
+/**
+   Return the tree struct for the tree with the specified id, if one
+   exists, and null otherwise.
+ */
 tree_t *scene_tree_get(scene_t *s, size_t idx);
+
+/**
+   Return the total number of trees in the scene
+ */
 size_t scene_tree_get_count(scene_t *s);
+
+/**
+   Create a new tree with the specified properties.
+ */
 int scene_tree_create(
     scene_t *s,
     char *tree_type_name,

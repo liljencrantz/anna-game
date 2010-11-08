@@ -7,6 +7,8 @@
 #define TREE_SECTION_JOINT 1
 #define TREE_SECTION_POINTS 2
 
+#define TREE_NAME_SZ 32
+
 typedef struct 
 {
     int count;
@@ -28,7 +30,7 @@ typedef struct
 typedef struct
 {
     size_t section_count;
-    char *name;
+    char name[TREE_NAME_SZ];
     tree_section_t section[];
 }
     tree_type_t;
@@ -50,6 +52,5 @@ typedef struct tree tree_t;
 void tree_load_init(void);
 
 tree_type_t *tree_type_get(char *name);
-
 
 #endif

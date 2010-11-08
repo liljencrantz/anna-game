@@ -246,7 +246,7 @@ int rndc()
 void render_trees_leaves(scene_t *s)
 {
     return;
-    
+/*    
     glShadeModel( GL_FLAT );
     
     int i;
@@ -265,7 +265,7 @@ void render_trees_leaves(scene_t *s)
     }
 
     glShadeModel(GL_SMOOTH);
-        
+*/      
 }
 
 void render_trees_trunk(scene_t *s)
@@ -282,22 +282,44 @@ void render_trees_trunk(scene_t *s)
 
     int i;
     int count=0;
+
+    int my_x = s->camera.pos[0]/ITEM_TILE_SIZE;
+    int my_y = s->camera.pos[1]/ITEM_TILE_SIZE;
+
+    int x, y;
+    int steps = RENDER_DISTANCE/ITEM_TILE_SIZE;
     
-    for(i=0; i<scene_tree_get_count(s); i++)
+    int side = ceilf(s->scene_size/ITEM_TILE_SIZE);
+
+    for( x = my_x-steps; x <= my_x+steps; x++)
     {
-	tree_t *tree = scene_tree_get(s, i);
-	if( tree )
-	{
-	    count++;
-	    tree->visible = scene_is_visible(s,tree->pos, 3);
-	    if(tree->visible)
-		render_tree_trunk(s, tree);
-	    if(count >= scene_tree_get_count(s))
-		break;
-	}
+	if( x < 0 || x >= side)
+	    continue;
 	
+	for( y = my_y-steps; y <= my_y+steps; y++)
+	{
+	    if( y < 0 || y >= side)
+		continue;
+	
+	    int my_idx = x + y * side;	    
+	    
+	    if(s->tree_tile[my_idx])
+	    {
+		for(i=0; i<s->tree_tile[my_idx]->count; i++)
+		{
+		    tree_t *tree = &s->tree_tile[my_idx]->tree[i];
+		    assert(tree);
+		    
+		    tree->visible = scene_is_visible(s,tree->pos, 3);
+		    if(tree->visible)
+			render_tree_trunk(s, tree);
+		}
+	    }
+	    
+	}
     }
     
+
     //  glDepthMask( GL_TRUE );
 //    glDisable(GL_TEXTURE_2D);
 //    glDisable( GL_ALPHA_TEST );

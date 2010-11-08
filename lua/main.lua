@@ -16,23 +16,6 @@ function initWorld()
    
    boid = BoidSetPeer.create(w.scene, 40, 40, 40);
    
-   for i = 11, 200, 3 do
-      for j = 11, 200, 15 do
-	 if true then
-	    local x = i+5*math.sin(0.1*j)
-	    local y = j+5*math.sin(0.1*i)
-	    bid = BallPeer.create(w.scene, "ball1", 1.5)
-	    bid:setLocation(
-	       w.scene, 
-	       x,y,
-	       w.scene:getHeight(x,y)+4,
-	       40,0,0)
-	    --	    else
-	    TreePeer.create(w.scene, "tree1", i+5*math.sin(0.1*j), j+5*math.sin(0.1*i), (i*10+j*13)%360, 1);
-	 end
-      end
-   end
-
    return w
 end
 
@@ -42,9 +25,7 @@ function run()
    if false then
       editor.createWorld()
    else
-      editor.createWorld()
       local w = initWorld()
-      
       local lastTime = w.scene:getRealTime()
       local framerate = 30
       i=1

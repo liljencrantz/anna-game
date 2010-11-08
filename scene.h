@@ -17,8 +17,25 @@
 
 #define SCENE_NAME_MAX 31
 #define SCENE_NAME_SZ (SCENE_NAME_MAX+1)
+#define RENDER_DISTANCE 130
 
 #define BUFF_SZ 512
+
+#define ITEM_TILE_SIZE 50
+
+typedef struct
+{
+    size_t count;
+    ball_t ball[];
+}
+    ball_tile_t;
+
+typedef struct
+{
+    size_t count;
+    tree_t tree[];
+}
+    tree_tile_t;
 
 /**
    The scene object is rather large, because it contains statically
@@ -44,7 +61,7 @@ typedef struct
     view_t camera;	
     
     float target_fps;
-
+    
     float leaf_offset;
     float grass_offset;
     
@@ -55,10 +72,9 @@ typedef struct
     
     hash_table_t ball_type;
     
-    tree_t tree[SCENE_TREE_MAX];
-    int tree_used[SCENE_TREE_MAX/32];
-    size_t tree_search_start;
-    size_t tree_count;
+    ball_tile_t **ball_tile;
+
+    tree_tile_t **tree_tile;
     
     ball_t ball[SCENE_BALL_MAX];
     int ball_used[SCENE_BALL_MAX/32];
@@ -111,7 +127,11 @@ void scene_init(scene_t *s, char *name, int load);
    This function must only be called on a scene without background
    loading, e.g. in editor mode.
  */
-void scene_configure(scene_t *s, int tile_levels, float scene_size);
+void scene_configure(
+    scene_t *s,
+    int tile_levels, float scene_size,
+    int max_tree_count, int max_item_count );
+
 
 /**
    Save the entire game world to disk. This is potentially very slow.
@@ -167,19 +187,6 @@ int scene_nid_is_visible(scene_t *s, nid_t nid, view_t *pos);
 int scene_is_visible(scene_t *s, float *pos, float radius);
 
 /**
-   Remove the tree with the specified id from the scene
- */
-void scene_tree_destroy(
-    scene_t *s, 
-    int tid);
-
-/**
-   Return the tree struct for the tree with the specified id, if one
-   exists, and null otherwise.
- */
-tree_t *scene_tree_get(scene_t *s, size_t idx);
-
-/**
    Return the total number of trees in the scene
  */
 size_t scene_tree_get_count(scene_t *s);
@@ -193,6 +200,8 @@ int scene_tree_create(
     float *pos,
     float angle,
     float scale);
+
+void scene_save_items(scene_t *s);
 
 void scene_ball_destroy(
     scene_t *s, 

@@ -210,17 +210,6 @@ static int lua_tree_create (lua_State *L)
 }
 
 
-static int lua_tree_destroy(lua_State *L)
-{
-    scene_t *s = (scene_t *)lua_topointer(L, 2);
-    int *t = (int *)check_item(L, 1, "TreePeer");
-    if(t)
-    {
-	scene_tree_destroy(s, *t);
-    }
-    return 0;
-}
-
 static int lua_ball_create (lua_State *L)
 {
     int *res = (int *)lua_newuserdata(L, sizeof(int));
@@ -402,11 +391,43 @@ static int lua_scene_configure(lua_State *L)
     scene_configure(
 	s, 
 	luaL_checkint(L, 2),
-	luaL_checknumber(L, 3));
+	luaL_checknumber(L, 3),
+	luaL_checkint(L, 4),
+	luaL_checkint(L, 5));
         
     return 0;
 }
 
+static int lua_scene_create_tree(lua_State *L)
+{
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
+    char *name = luaL_checkstring(L, 2);
+    float x = luaL_checknumber(L,3);
+    float y = luaL_checknumber(L,4);
+    float pos[] = 
+	{
+	    x, y
+	}
+    ;
+    float angle = luaL_checknumber(L,5);
+    float scale = luaL_checknumber(L,6);
+    
+    scene_tree_create(
+	s,
+	name,
+	pos,
+	angle, scale
+	);
+    
+    return 0;
+}
+
+static int lua_scene_save_items(lua_State *L)
+{
+    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
+    scene_save_items(s);
+    return 0;
+}
 
 static int lua_scene_set_terrain_element(lua_State *L)
 {
@@ -593,6 +614,8 @@ void register_types(
 	{"render", lua_scene_render},
 	{"getHeight", lua_scene_get_height},
 	{"getSlope", lua_scene_get_slope},
+	{"createTree", lua_scene_create_tree},
+	{"saveItems", lua_scene_save_items},
 	{0,0}
     };
 
@@ -618,7 +641,6 @@ void register_types(
     
     static const luaL_reg tree_methods[] = {
 	{"create", lua_tree_create},	
-	{"destroy", lua_tree_destroy},	
 	{0,0}
     };
 

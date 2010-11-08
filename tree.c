@@ -81,6 +81,9 @@ tree_type_t *tree_load(char *name)
 {
     tree_type_t *res = malloc(sizeof(tree_type_t) + 300 * sizeof(tree_section_t));
     
+    assert(name && strlen(name) < TREE_NAME_SZ);
+    strcpy(res->name, name);
+    
     res->section_count=0;
 
     float branch_data[][3]=
@@ -416,7 +419,7 @@ void tree_load_init()
 tree_type_t *tree_type_get(char *name)
 {
     if(tree_type == 0)
-	tree_type = tree_load(0);
+	tree_type = tree_load(name);
     
     return tree_type;
 }

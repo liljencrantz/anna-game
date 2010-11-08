@@ -12,9 +12,12 @@ World
 * Collision objects, e.g. trees
 * Multiple actor objects
 * Clean up Lua bindings - drop the peers and use raw objects directly
+* Reference counting for tree types, ball types, etc
 
 Art
 
+* Balls should use textures, not vertex colors
+* Switch to using VBOs for
 * Skybox
 * Clouds
 * Stars

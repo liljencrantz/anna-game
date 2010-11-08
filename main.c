@@ -21,7 +21,6 @@
 
 void init()
 {
-//    ior_init(IOR_MEM_USAGE);
     tree_load_init();
     
     if(0)
@@ -36,7 +35,7 @@ void init()
 	fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 	exit(1);
     }
-    fprintf(stdout, "Status: Using GLEW %s\n", glewGetString(GLEW_VERSION));
+    fprintf(stdout, "Using GLEW %s\n", glewGetString(GLEW_VERSION));
 
     render_init();    
     anna_lua_init();

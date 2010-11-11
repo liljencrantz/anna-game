@@ -52,7 +52,7 @@ ball_type_t *ball_type_load(char *dir, char *name)
     {
 
 	struct stat sbuff;
-
+	
 	if(!stat(cbuff, &sbuff))
 	{
 	    

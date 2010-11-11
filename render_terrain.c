@@ -3,13 +3,13 @@
 #include <math.h>
 #include <pthread.h>
 #include <GL/glew.h>
-//#include <GL/glew.h>
 
 #include "scene.h"
 #include "node.h"
 #include "util.h"
 #include "render.h"
 #include "heightmap_element.h"
+#include "vertex_data.h"
 
 #define GRASS_MAX_DISTANCE 15.0
 #define GRASS_HEIGHT 0.25
@@ -20,15 +20,6 @@
 
 #define MIDDLE_ELEMENT 8
 #define TERRAIN_SCALE_THRESHOLD 1.2
-
-typedef struct
-{
-    GLfloat pos[3];
-//    GLfloat normal[3];
-    GLubyte color[4];
-}
-    vertex_element_t;
-
 
 static heightmap_element_t fake_element= 
 {
@@ -44,17 +35,6 @@ static heightmap_element_t fake_element=
 }
     ;
 
-
-typedef struct 
-{
-    vertex_element_t *vertex;
-    GLushort *index;
-    int idx_count;
-    int vertex_count;
-    GLuint vbo;
-    GLuint ibo;
-}
-      vertex_data_t;
 
 
 typedef struct
@@ -159,23 +139,23 @@ static void vertex_perspective(
     float b = el->vertex[1]-pos[1];
     if (DRAW)
     {
-	vd->vertex[vd->vertex_count].pos[0] = el->vertex[0];
-	vd->vertex[vd->vertex_count].pos[1] = el->vertex[1];
-	vd->vertex[vd->vertex_count].pos[2] = el->vertex[2]+render_height_correct(a,b);
-	
-	vd->vertex[vd->vertex_count].color[0] = el->color[0]*el->shade;
-	vd->vertex[vd->vertex_count].color[1] = el->color[1]*el->shade;
-	vd->vertex[vd->vertex_count].color[2] = el->color[2]*el->shade;
-	vd->vertex[vd->vertex_count].color[3] = 255;
+	float tmp = el->vertex[2];
+	el->vertex[2] +=render_height_correct(a,b);
+		
+	vd_add_vertex(
+	    vd,
+	    el->vertex,
+	    el->normal,
+	    el->color);
+	el->vertex[2] = tmp;
 	
 	if(vd->vertex_count > idx0+1)
 	{
-	    vd->index[vd->idx_count++] = idx0;
-	    vd->index[vd->idx_count++] = vd->vertex_count-1;
-	    vd->index[vd->idx_count++] = vd->vertex_count;
+	    vd_add_index(vd, idx0);
+	    vd_add_index(vd, vd->vertex_count-2);
+	    vd_add_index(vd, vd->vertex_count-1);
 	}
 	
-	vd->vertex_count++;
 /*
 	glColor3ub( el->color[0]*el->shade, el->color[1]*el->shade, el->color[2]*el->shade);    
 //	printf( "%f %f %f\n", el->color[0]*el->shade, el->color[1]*el->shade, el->color[2]*el->shade);    
@@ -638,67 +618,6 @@ static void render_node(scene_t *s, nid_t nid, vertex_data_t *vd)
     }
 }
 
-#define NUMBER_OF_COMPONENTS_PER_VERTEX 3
-#define NUMBER_OF_COMPONENTS_PER_COLOR 4
-
-void render_data(vertex_data_t *vd)
-{
-
-   
-    // bind the buffer object to use
-    glBindBuffer(GL_ARRAY_BUFFER, vd->vbo);
-  
-    const GLsizeiptr vertex_size = vd->vertex_count*sizeof(vertex_element_t);
-    
-    glBufferData(GL_ARRAY_BUFFER, vertex_size, vd->vertex, GL_STREAM_DRAW);
-/*
-    GLvoid* vbo_buffer = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY); 
-    
-    printf("b %d %d\n", vbo_buffer, vd->vertex);
-    
-    float *b = vbo_buffer;
-    b[0]=3.3;
-    printf("b2\n");
-    // transfer the vertex data to the VBO 
-    memcpy(vbo_buffer, vd->vertex, vertex_size);
-    printf("c\n");
-
-    // append color data to vertex data. To be optimal, 
-    // data should probably be interleaved and not appended 
-    vbo_buffer += vertex_size; 
-    memcpy(vbo_buffer, vd->color, color_size); 
-    glUnmapBuffer(GL_ARRAY_BUFFER); 
-*/      
-    // Describe to OpenGL where the vertex data is in the buffer 
-    glVertexPointer(3, GL_FLOAT, sizeof(vertex_element_t), 0); 
-
-    // Describe to OpenGL where the color data is in the buffer
-    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(vertex_element_t), (void *)offsetof(vertex_element_t, color));
-    
-    // create index buffer 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vd->ibo); 
-        
-    // For constrast, instead of glBufferSubData and glMapBuffer, 
-    // we can directly supply the data in one-shot 
-    glBufferData(
-	GL_ELEMENT_ARRAY_BUFFER,
-	vd->idx_count*sizeof(GLuint), 
-	vd->index, 
-	GL_STREAM_DRAW);
-    
-    // Activate the VBOs to draw 
-    //   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo); 
-    glEnableClientState(GL_VERTEX_ARRAY); 
-    glEnableClientState(GL_COLOR_ARRAY); 
-    
-    // This is the actual draw command 
-    glDrawElements(
-	GL_TRIANGLES,
-	vd->idx_count,
-	GL_UNSIGNED_SHORT,
-	(GLvoid*)((char*)NULL));
-   
-}
 
 void render_terrain( scene_t *s, vertex_data_t *vd )
 {
@@ -712,9 +631,9 @@ void render_terrain( scene_t *s, vertex_data_t *vd )
 	s->render_quality *= 0.95;
     }
     //printf("Node count: %d\n", node_count);
-	
-    vd->idx_count=0;
-    vd->vertex_count=0;
+
+    vd_reset(vd);
+    
     render_node(s, root, vd);    
 /*    
     glDisable( GL_CULL_FACE );
@@ -726,7 +645,6 @@ void render_terrain( scene_t *s, vertex_data_t *vd )
 static void *render_terrain_thread_runner(void *arg)
 {
     set_current_thread_name("anna (terrain)");
-    
     
     pthread_mutex_lock(&render_terrain_mutex);
     thread_data_t *d = arg;
@@ -746,10 +664,8 @@ void render_terrain_start(scene_t *s)
     {
 	thread_data_t *td = malloc(sizeof(thread_data_t));
 	td->s = s;
-	td->vd.vertex = malloc(sizeof(vertex_element_t)*10*3000);
-	td->vd.index = malloc(sizeof(GLushort)*3000*3*8);
-	td->vd.idx_count=0;
-	td->vd.vertex_count=0;
+	vd_init(&td->vd, 10*3000, 3000*8*3);
+	
 	glGenBuffers(1, &(td->vd.vbo));
 	glGenBuffers(1, &(td->vd.ibo));
 	s->terrain_state = td;	
@@ -794,9 +710,27 @@ void render_terrain_finish(scene_t *s)
 {
     pthread_mutex_lock(&render_terrain_mutex);
     glEnable( GL_CULL_FACE );
+
+    glEnable(GL_LIGHTING);
+    glEnable(GL_RESCALE_NORMAL);
+    glShadeModel(GL_SMOOTH);
+    
+    glEnable(GL_LIGHT0);
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, s->ambient_light);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, s->camera_light);
+    
+    glColorMaterial ( GL_FRONT, GL_AMBIENT_AND_DIFFUSE ) ;
+    glEnable ( GL_COLOR_MATERIAL ) ;
+
+
     thread_data_t *td = s->terrain_state;
     s->triangle_count += td->vd.idx_count/3;
-    render_data(&td->vd);   
+    vd_stream( &td->vd, GL_TRIANGLES);
+    
+    glDisable(GL_LIGHT0);
+    glDisable(GL_LIGHTING);
+
     pthread_mutex_unlock(&render_terrain_mutex);
 }
 

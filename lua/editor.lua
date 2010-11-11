@@ -53,6 +53,23 @@ function createWorld()
    terrainDiamond(
       w.scene, 10, 1, 1, (2^10) +1, (2^10) +1)
    
+   for i = 1, 2^10 do
+      for j = 1, 2^10 do
+	 
+	 local h = w.scene:getTerrainElement(10,i,j) or 1000
+	 dx, dy = w.scene:getSlope(i,j)
+	 dd = math.sqrt(dx*dx + dy*dy)
+	 c = {0.2,0.4,0.1}
+	 if dd > 1 then
+	    c = {0.3,0.3,0.3}
+	 end
+	 
+	 w.scene:setTerrainElement(10,i,j,h, unpack(c))
+	 
+      end
+   end
+
+
    
    print("Terrain created")
    

@@ -267,7 +267,6 @@ void render_balls(scene_t *s)
     glEnable(GL_LIGHT0);
 
 // Create light components
-    
 // Assign created components to GL_LIGHT0
     glLightfv(GL_LIGHT0, GL_AMBIENT, s->ambient_light);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, s->camera_light);
@@ -317,7 +316,6 @@ void render_balls_init()
 	    }
 	}
     }
-    
 }
 
 

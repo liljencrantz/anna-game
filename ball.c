@@ -28,21 +28,6 @@ ball_type_t *ball_type_create(size_t level, allocfn_t alloc)
     return res;    
 }
 
-ball_type_prerender(ball_type_t *b)
-{
-    int i;
-    glEnable( GL_CULL_FACE );	
-    b->list_index = glGenLists(b->levels);
-//    printf("Wowee %d\n", b->list_index);
-    
-    for(i=0;i<b->levels; i++)
-    {
-	glNewList(b->list_index+i, GL_COMPILE);
-	render_ball_at_level(b, i);
-	glEndList();
-    }
-}
-
 
 ball_type_t *ball_type_load(char *dir, char *name)
 {
@@ -65,7 +50,7 @@ ball_type_t *ball_type_load(char *dir, char *name)
 		    size_t r = fread(res, sbuff.st_size, 1, f);
 		    if((fclose(f)==0) && (r == 1))
 		    {
-			ball_type_prerender(res);
+			render_ball_type_prerender(res);
 			return res;
 		    }
 		}

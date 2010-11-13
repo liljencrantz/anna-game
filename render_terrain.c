@@ -142,7 +142,7 @@ static void vertex_perspective(
 	float tmp = el->vertex[2];
 	el->vertex[2] +=render_height_correct(a,b);
 		
-	vd_add_vertex(
+	vd_add_vertex_v(
 	    vd,
 	    el->vertex,
 	    el->normal,
@@ -666,8 +666,6 @@ void render_terrain_start(scene_t *s)
 	td->s = s;
 	vd_init(&td->vd, 10*3000, 3000*8*3);
 	
-	glGenBuffers(1, &(td->vd.vbo));
-	glGenBuffers(1, &(td->vd.ibo));
 	s->terrain_state = td;	
 
 /*
@@ -722,7 +720,6 @@ void render_terrain_finish(scene_t *s)
     
     glColorMaterial ( GL_FRONT, GL_AMBIENT_AND_DIFFUSE ) ;
     glEnable ( GL_COLOR_MATERIAL ) ;
-
 
     thread_data_t *td = s->terrain_state;
     s->triangle_count += td->vd.idx_count/3;

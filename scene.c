@@ -291,7 +291,7 @@ static tree_tile_t *scene_tree_tile_load(scene_t *s, ssize_t idx)
 	if(!stat(fname, &sbuff))
 	{
 	    size_t item_count = sbuff.st_size / (sizeof(tree_t) - sizeof(tree_type_t *) + TREE_NAME_SZ);
-	    printf("Load tile with %d items\n", item_count);
+//	    printf("Load tile with %d items\n", item_count);
 	    
 	    size_t sz = sizeof(tree_tile_t) + sizeof(tree_t)*item_count;
 	    res = calloc(sz,1);
@@ -403,7 +403,7 @@ static int scene_try_load_tile(
     int idx = scene_find_missing_item_tile(s);
     if(idx != SCENE_NONE)
     {
-	printf("Found item tile to load at index %d\n", idx);
+//	printf("Found item tile to load at index %d\n", idx);
 	
 	tree_tile_t *tt = scene_tree_tile_load(s, idx);
 	ball_tile_t *bt = scene_ball_tile_load(s, idx);

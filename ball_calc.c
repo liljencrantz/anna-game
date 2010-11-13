@@ -236,5 +236,5 @@ void ball_type_calc(ball_type_t *b)
     ball_type_calc_lod(b);
     ball_type_calc_node_distortion(b);
 
-    ball_type_prerender(b);
+    render_ball_type_prerender(b);
 }

@@ -15,7 +15,9 @@ function initWorld()
    actor.Actor.create(w, "Hasse");
    
    boid = BoidSetPeer.create(w.scene, 40, 40, 40);
-   
+
+   local b = BallPeer.create(w.scene, "ball1", 5);
+   b:setLocation(w.scene, 40,40,6,0,0,0);
    return w
 end
 

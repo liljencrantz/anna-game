@@ -2,6 +2,7 @@
 #define BALL_H
 
 #include "util.h"
+#include "vertex_data.h"
 
 #define BALL_LEVEL_MAX 8
 
@@ -16,7 +17,7 @@ typedef struct
 {
     size_t levels;
     float error[BALL_LEVEL_MAX];
-    GLuint list_index;
+    vertex_data_t prerender[BALL_LEVEL_MAX];
     ball_point_t data[];
 }
     ball_type_t;
@@ -61,6 +62,8 @@ ball_type_t *ball_type_load(char *dir, char *name);
 
 ball_type_t *ball_type_create(size_t level, allocfn_t alloc);
 void ball_type_calc(ball_type_t *b);
+
+void render_ball_type_prerender(ball_type_t *b);
 
 
 #endif

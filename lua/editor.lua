@@ -79,7 +79,6 @@ function createWorld()
    w.scene:saveTerrain()
    print("Terrain saved")
 
---[[
    local bt = BallType.create(6)
    for i = 1, (2^7) do
       for j = 1, (2^6) do
@@ -122,7 +121,7 @@ function createWorld()
    bt:save("anna", "rightArm1")
 
    print("Balls created and saved")
-]]--
+
 
    print("Creating trees...")
    for i = 11, 790, 4 do

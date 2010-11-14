@@ -579,42 +579,23 @@ static int lua_screen_swap_buffers(lua_State *L)
     return 0;
 }
 
-
-typedef struct {
- char *filename;
-    lua_State *L
-} lua_createthread_data;
-
 static void *lua_createthread_inner(void*data) {
-    lua_createthread_data *param = (lua_createthread_data *) data;
+    lua_State *L = (lua_State *) data;
 
-    int status = luaL_loadfile(param->L, param->filename);
-    if (status) {
-        /* If something went wrong, error message is at the top of */
-        /* the stack */
-        fprintf(stderr, "THREAD: Couldn't load file: %s\n", lua_tostring(param->L, -1));
-        exit(1);
-    }
-    
-    int result = lua_pcall(param->L, 0, LUA_MULTRET, 0);
+    int result = lua_pcall(L, 0, LUA_MULTRET, 0);
     if (result) {
-        fprintf(stderr, "THREAD: Failed to run script: %s\n", lua_tostring(param->L, -1));
+        fprintf(stderr, "THREAD: Failed to run script: %s\n", lua_tostring(L, -1));
         exit(1);
     }
-    free(param->filename);
-    free(param);
 }
 
 static int lua_createthread(lua_State *L) {
-    char *filename = (char *)luaL_checkstring(L, 1);
-
-    lua_createthread_data *param = (lua_createthread_data*) malloc(sizeof(lua_createthread_data));
-    param->filename = malloc(strlen(filename) + 1);
-    strcpy(param->filename, filename);
-    param->L = lua_newthread(L);
+    lua_State *tL = lua_newthread(L);
+    lua_pushvalue(L, -2);
+    lua_xmove(L, tL, 1);
 
     pthread_t thread;
-    if (pthread_create(&thread, NULL, lua_createthread_inner, param) != 0) {
+    if (pthread_create(&thread, NULL, lua_createthread_inner, tL) != 0) {
         printf("THREAD: Warning: Unable to create thread: %s\n", strerror(errno));
         exit(1);
     }

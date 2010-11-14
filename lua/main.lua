@@ -21,9 +21,21 @@ function initWorld()
    return w
 end
 
+local clock = os.clock
+function sleep(n)  -- seconds
+  local t0 = clock()
+  while clock() - t0 <= n do end
+end
+
+function somethread()
+    while true do
+	sleep(1.0);
+	print("Inthread");
+    end
+end
 
 function run()
-   x = createthread("lua/kafoo.lua")
+   x = createthread(somethread)
 
 
    if false then

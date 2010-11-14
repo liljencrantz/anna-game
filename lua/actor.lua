@@ -32,11 +32,7 @@ Actor = {}
 
 function Actor.create(world,name)
    local self = {}
-   for key, val in pairs(Actor) do
---      print("WOOO")
---      print(key)
-      self[key] = val
-   end
+   setmetatable(self, {__index = Actor})
    
    self.actions = {}
    self.world=world

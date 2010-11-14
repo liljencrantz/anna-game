@@ -23,7 +23,9 @@ end
 
 
 function run()
-   
+   createthread("lua/kafoo.lua");
+
+
    if false then
       editor.createWorld()
    else

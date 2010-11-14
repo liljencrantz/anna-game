@@ -5,11 +5,13 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <errno.h>
 
 #include <lua5.1/lua.h>
 #include <lua5.1/lauxlib.h>
 #include <lua5.1/lualib.h>
 
+#include "luauser.h"
 #include "scene.h"
 #include "tree.h"
 #include "ball.h"
@@ -578,6 +580,49 @@ static int lua_screen_swap_buffers(lua_State *L)
 }
 
 
+typedef struct {
+ char *filename;
+    lua_State *L
+} lua_createthread_data;
+
+static void *lua_createthread_inner(void*data) {
+    lua_createthread_data *param = (lua_createthread_data *) data;
+
+    int status = luaL_loadfile(param->L, param->filename);
+    if (status) {
+        /* If something went wrong, error message is at the top of */
+        /* the stack */
+        fprintf(stderr, "THREAD: Couldn't load file: %s\n", lua_tostring(param->L, -1));
+        exit(1);
+    }
+    
+    int result = lua_pcall(param->L, 0, LUA_MULTRET, 0);
+    if (result) {
+        fprintf(stderr, "THREAD: Failed to run script: %s\n", lua_tostring(param->L, -1));
+        exit(1);
+    }
+    free(param->filename);
+    free(param);
+}
+
+static int lua_createthread(lua_State *L) {
+    char *filename = (char *)luaL_checkstring(L, 1);
+
+    lua_createthread_data *param = (lua_createthread_data*) malloc(sizeof(lua_createthread_data));
+    param->filename = malloc(strlen(filename) + 1);
+    strcpy(param->filename, filename);
+    param->L = lua_newthread(L);
+
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, lua_createthread_inner, param) != 0) {
+        printf("THREAD: Warning: Unable to create thread: %s\n", strerror(errno));
+        exit(1);
+    }
+
+    return 1;
+}
+
+
 
 void register_types(
     lua_State *L)
@@ -777,6 +822,7 @@ void register_types(
 	boid_set_setters);
 
 
+    lua_register(L, "createthread", lua_createthread);
 }
 
     
@@ -795,6 +841,8 @@ void anna_lua_run()
 
 void anna_lua_init()
 {
+    annalua_initlock();
+
     L = lua_open();
     luaL_openlibs(L);
     

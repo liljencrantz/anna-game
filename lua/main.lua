@@ -23,7 +23,7 @@ end
 
 
 function run()
-   createthread("lua/kafoo.lua");
+   x = createthread("lua/kafoo.lua")
 
 
    if false then

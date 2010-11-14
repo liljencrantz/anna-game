@@ -18,3 +18,12 @@ function dot(a, b)
    end
    return res
 end
+
+function copy(a)
+   local res = {}
+   for i,v in pairs(a) do
+      res[i] = v
+   end
+   return res
+end
+

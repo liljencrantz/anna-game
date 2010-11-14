@@ -1,4 +1,4 @@
-module("actor", package.seeall)
+module("tree", package.seeall)
 
 animations={
    run= 
@@ -32,7 +32,11 @@ Actor = {}
 
 function Actor.create(world,name)
    local self = {}
-   setmetatable(self, {__index = Actor})
+   for key, val in pairs(Actor) do
+--      print("WOOO")
+--      print(key)
+      self[key] = val
+   end
    
    self.actions = {}
    self.world=world

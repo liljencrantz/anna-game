@@ -33,7 +33,7 @@ typedef struct
 
 /**
    Initialize a vd with room for the specified number of verices and indices.
- */
+*/
 void vd_init(
     vertex_data_t *vd, 
     int vertex_count,
@@ -42,27 +42,27 @@ void vd_init(
 /**
    Reset index/vertex counters. This only makes sense when reusing a
    vd, e.g. when using vd_stream.
- */
+*/
 void vd_reset(
     vertex_data_t *vd );
 
 /**
    Generate the VBO without freeing the temp buffers and then draw it
    using the specified element type
- */
+*/
 void vd_stream(
     vertex_data_t *vd,
     int type);
 
 /**
    Generate the VBO and free temp buffers
- */
+*/
 void vd_generate(
     vertex_data_t *vd);
 
 /**
    Draw the VBO using the specified element type
- */
+*/
 void vd_draw(
     vertex_data_t *vd,
     int type);
@@ -71,7 +71,7 @@ void vd_draw(
 
 /**
    Add a vertex to the list using vector arguments
- */
+*/
 static inline void vd_add_vertex_v(
     vertex_data_t *vd, 
     float *pos, float *normal, GLubyte *color)
@@ -84,7 +84,7 @@ static inline void vd_add_vertex_v(
 
 /**
    Add a vertex to the list using separate arguments for each component
- */
+*/
 static inline void vd_add_vertex_a(
     vertex_data_t *vd, 
     float p_x, float p_y, float p_z,

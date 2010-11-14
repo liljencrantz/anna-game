@@ -3,9 +3,13 @@
 
 #include <GL/glew.h>	
 
+#include "ball.h"	
+
 #define TREE_SECTION_REGULAR 0
 #define TREE_SECTION_JOINT 1
 #define TREE_SECTION_POINTS 2
+
+#define TREE_BALL_MAX 4
 
 #define TREE_NAME_SZ 32
 
@@ -30,7 +34,9 @@ typedef struct
 typedef struct
 {
     size_t section_count;
+    size_t ball_count;
     char name[TREE_NAME_SZ];
+    ball_type_t *ball[TREE_BALL_MAX];
     tree_section_t section[];
 }
     tree_type_t;
@@ -38,13 +44,14 @@ typedef struct
 struct tree
 {
     tree_type_t *type;
-
+    
     GLfloat pos[3];
     GLfloat angle;
     GLfloat radius;
     
     GLfloat scale;
     int visible;    
+    int ball_idx[TREE_BALL_MAX];
 };
 
 typedef struct tree tree_t;

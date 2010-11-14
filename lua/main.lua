@@ -35,15 +35,6 @@ end
 
 function run()
 
-   local t = transform.Transform.create()
-   print(t)
-   t:translate(3,4,5)
-   print(t)
-
-   local t2 = t*t
-   print(t2)
-   exit()
-   
    if false then
       editor.createWorld()
    else

@@ -15,6 +15,7 @@
 #include "util.h"
 #include "hash_table.h"
 #include "scene.h"
+#include "thread.h"
 
 #define SCENE_FORMAT_VERSION 0
 
@@ -27,6 +28,22 @@
    needed by the renderer until it will be unloaded.
  */
 #define SCENE_UNLOAD_GRACE_PERIOD 30
+
+#define SCENE_PRELOAD_QUEUE_MAX 1024
+
+typedef struct
+{
+    void *key;
+    void *dst;
+}
+    preload_item_t;
+
+typedef struct
+{
+    int used;
+    preload_item_t arr[SCENE_PRELOAD_QUEUE_MAX];
+}
+    preload_q_t;
 
 typedef struct 
 {
@@ -55,6 +72,42 @@ typedef struct
     int subtile_level;    
 }
     subtile_t;
+
+static ball_type_t *scene_ball_type_prerender_obj = 0;
+static preload_q_t scene_pq_bt = {0};
+
+static void pq_push(scene_t *s, preload_q_t *q, preload_item_t item)
+{
+    scene_load_t *sl = (scene_load_t *)s->load_state;
+    pthread_mutex_lock(&sl->mutex);
+    q->arr[q->used++] = item;
+    pthread_mutex_unlock(&sl->mutex);	
+}
+
+static void pq_push_unsafe(scene_t *s, preload_q_t *q, preload_item_t item)
+{
+    q->arr[q->used++] = item;
+}
+
+static preload_item_t pq_pop(scene_t *s, preload_q_t *q)
+{
+    scene_load_t *sl = (scene_load_t *)s->load_state;
+    preload_item_t res = {0,0};
+    pthread_mutex_lock(&sl->mutex);
+    if(q->used)
+	res = q->arr[--q->used];
+    pthread_mutex_unlock(&sl->mutex);	
+    return res;
+}
+
+static preload_item_t pq_pop_unsafe(scene_t *s, preload_q_t *q)
+{
+    preload_item_t res = {0,0};
+    if(q->used)
+	res = q->arr[--q->used];
+    return res;
+}
+
 
 static tile_t *scene_tile_load(scene_t *s, subtile_t *st)
 {
@@ -281,7 +334,7 @@ static tree_tile_t *scene_tree_tile_load(scene_t *s, ssize_t idx)
 {
     char fname[BUFF_SZ];
     size_t item_tile_side = ceilf(s->scene_size/ITEM_TILE_SIZE);
-    int i, j;
+    int j;
     tree_tile_t *res;
     
     if(snprintf(fname, BUFF_SZ, "data/%s/tree/tile_%d.atd", s->name, idx) < BUFF_SZ)
@@ -378,10 +431,27 @@ static int scene_find_missing_item_tile(scene_t *s)
   Otherwise, return false.
 */
 static int scene_try_load_tile(
-    scene_t *s, int do_lock)
+    scene_t *s)
 {
+    int do_lock = !thread_is_render();
+    
     scene_load_t *sl = (scene_load_t *)s->load_state;
     subtile_t sub;
+
+    preload_item_t pq_item;
+    
+    pq_item = pq_pop(s, &scene_pq_bt);
+    if(pq_item.key)
+    {
+	char *name = (char *)pq_item.key;
+//	printf("Loading ball %s\n", name);
+	ball_type_t *bt = ball_type_load(s->name, name);
+	scene_ball_type_prerender(s, bt);
+	ball_type_t **target = (ball_type_t **)pq_item.dst;
+	*target = bt;
+	return 1;
+    }
+    
     if(scene_find_missing_tile(s, &sub))
     {
 	tile_t *t = scene_tile_load(s, &sub);
@@ -452,10 +522,62 @@ void scene_update(scene_t *s)
     {
 	scene_load_t *sl = (scene_load_t *)s->load_state;
 	pthread_mutex_lock(&sl->mutex);
+	
+	if(scene_ball_type_prerender_obj)
+	{
+	    ball_type_t *t =scene_ball_type_prerender_obj;
+	    render_ball_type_prerender(scene_ball_type_prerender_obj);
+	    scene_ball_type_prerender_obj = 0;
+	    
+	    /*
+	      In this situation, we _know_ that the loader thread is
+	      waiting for us to finish - we can safely do whatever we
+	      want with the ball_type queue, so we take the chance to
+	      remove any duplicate load requests for this particular
+	      ball...
+	     */
+	    hash_put(&s->ball_type, t->name, t);
+	    int i;
+	    	    	    
+	    for(i=0; i<scene_pq_bt.used; i++)
+	    {
+	
+		if(strcmp(t->name, (char*)scene_pq_bt.arr[i].key)==0)
+		{
+		    ball_type_t **dst = (ball_type_t **)scene_pq_bt.arr[i].dst;
+		    *dst = t;
+		    scene_pq_bt.used--;
+		    scene_pq_bt.arr[i] = scene_pq_bt.arr[scene_pq_bt.used];
+		    i--;
+		}
+		
+	    }
+	    
+
+	}
+
 	pthread_cond_signal(&sl->convar);
 	pthread_mutex_unlock(&sl->mutex);
     }
 }
+
+
+void scene_ball_type_prerender(scene_t *s, ball_type_t *b)
+{
+    scene_load_t *sl = (scene_load_t *)s->load_state;
+/*
+    if(thread_is_render())
+    {
+	render_ball_type_prerender(b);
+	return;
+    }
+*/  
+    pthread_mutex_lock(&sl->mutex);
+    scene_ball_type_prerender_obj = b;
+    pthread_cond_wait(&sl->convar, &sl->mutex);	    
+    pthread_mutex_unlock(&sl->mutex);    
+}
+
 
 static void *scene_load_runner(void *arg)
 {
@@ -480,7 +602,7 @@ static void *scene_load_runner(void *arg)
     {
 	sl->current_lap++;
 	
-	if(!scene_try_load_tile(s,1))
+	if(!scene_try_load_tile(s))
 	{
 	    nanosleep(&ts, 0);
 	}	
@@ -522,13 +644,13 @@ static void scene_load_init(scene_t *s)
 		scene_load_t *sl = (scene_load_t *)s->load_state;
 		hash_init(&sl->used, &hash_ptr_func, &hash_ptr_cmp);
 		sl->current_lap = 0;
-		
-		while(scene_try_load_tile(s, 0))
-		    ;
-		
+			
 		pthread_mutex_init(&sl->mutex, 0);
 		pthread_cond_init(&sl->convar, 0);
 				
+		while(scene_try_load_tile(s))
+		    ;
+		
 		int rc = pthread_create(
 		    &sl->thread, 
 		    0,
@@ -1004,13 +1126,19 @@ void scene_ball_type_get(scene_t *s, char *n, ball_type_t ** pos)
     ball_type_t *t = hash_get(&s->ball_type, n);
     if(t)
     {
+	printf("Yeah! Ball type %s already loaded!\n", n);
 	*pos = t;
     }
     else
     {
-	t = ball_type_load(s->name, n);
-	hash_put(&s->ball_type, n, t);
-	*pos = t;
+	*pos = 0;
+	preload_item_t pi = 
+	    {
+		n,
+		pos
+	    }
+	;
+	pq_push(s, &scene_pq_bt, pi);
     }
     
 }
@@ -1026,9 +1154,12 @@ int scene_ball_create(
     
     ball_t *t = &s->ball[idx];
     
-    //printf("Create ball at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
+    printf("Create ball %d named %s\n",
+	   t, ball_type_name);
     
     scene_ball_type_get(s, ball_type_name, &(t->type));
+    assert(!t->type);
+    
     t->scale = scale;
     
     s->ball_count++;

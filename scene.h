@@ -224,5 +224,9 @@ int scene_boid_set_create(
     float x,
     float y);
 
+
+void scene_ball_type_prerender(scene_t *s, ball_type_t *b);
+
+
 #endif
 

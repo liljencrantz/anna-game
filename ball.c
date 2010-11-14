@@ -15,15 +15,18 @@
 #include "ball.h"
 #include "scene.h"
 #include "util.h"
+#include "thread.h"
 
 ball_type_t *ball_type;
 
-ball_type_t *ball_type_create(size_t level, allocfn_t alloc)
+ball_type_t *ball_type_create(size_t level, char *name, allocfn_t alloc)
 {
     size_t sz = sizeof(ball_type_t) + ball_point_count(level)* sizeof(ball_point_t);
+    assert(strlen(name) < BALL_NAME_MAX);
 //    printf("Ball has %d points\n",  ball_point_count(level));
     printf("Created new ball type, size is %.2f kB\n",  (float)sz/1024);
     ball_type_t *res = alloc.fn(alloc.data, sz);
+    strcpy(res->name, name);
     res->levels = level;
     return res;    
 }
@@ -50,7 +53,8 @@ ball_type_t *ball_type_load(char *dir, char *name)
 		    size_t r = fread(res, sbuff.st_size, 1, f);
 		    if((fclose(f)==0) && (r == 1))
 		    {
-			render_ball_type_prerender(res);
+			if(thread_is_render())
+			    render_ball_type_prerender(res);
 			return res;
 		    }
 		}

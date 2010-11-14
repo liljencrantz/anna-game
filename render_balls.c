@@ -314,15 +314,20 @@ void render_balls(scene_t *s)
     for(i=0;; i++)
     {
 	ball_t *ball = scene_ball_get(s, i);
-	if(ball && ball->type)
+
+	if(ball)
 	{
 	    count++;
-	    ball->visible = scene_is_visible(s,ball->pos, ball->scale);
-	    if(ball->visible)
-		render_ball(s, ball);
-	    if(count >= scene_ball_get_count(s))
-		break;
+	    if(ball->type)
+	    {
+		ball->visible = scene_is_visible(s,ball->pos, ball->scale);
+		if(ball->visible)
+		    render_ball(s, ball);
+		if(count >= scene_ball_get_count(s))
+		    break;
+	    }
 	}
+	
     }
     
     glDisable(GL_LIGHT0);

@@ -10,9 +10,11 @@
 #include "common.h"
 #include "render.h"
 #include "screen.h"
+#include "thread.h"
 
 void render_init()
 {
+    thread_set_render();    
     glClearDepth(1.0);				// Enables Clearing Of The Depth Buffer
     glDepthFunc(GL_LEQUAL);				// The Type Of Depth Test To Do
     glEnable(GL_DEPTH_TEST);

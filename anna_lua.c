@@ -232,6 +232,7 @@ static int lua_ball_type_create (lua_State *L)
     
     *res = ball_type_create(
 	luaL_checknumber(L, 1),
+	luaL_checkstring(L, 2),
 	allocfn_calloc);
     
     return 1;
@@ -275,8 +276,9 @@ static int lua_ball_type_calc(lua_State *L)
 static int lua_ball_type_save(lua_State *L)
 {
     ball_type_t **t = (ball_type_t **)check_item(L, 1, "BallType");
-    char *dname = (char *)luaL_checkstring(L, 2);
-    char *name = (char *)luaL_checkstring(L, 3);
+    scene_t *s = (scene_t *)check_item(L, 2, "Scene");
+    char *dname = s->name;
+    char *name = (*t)->name;
     ball_type_save(*t, dname, name);
     return 0;
 }

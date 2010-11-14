@@ -40,7 +40,7 @@ static inline void interpolate( ball_type_t *b, int level, int x, int y )
 	}
     ;
 	
-    int color[3];
+    int color[]={0,0,0};
     
     int side_x = 4 << level;
     int side_y = 2 << level;

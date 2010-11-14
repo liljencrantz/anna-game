@@ -79,7 +79,7 @@ function createWorld()
    w.scene:saveTerrain()
    print("Terrain saved")
 
-   local bt = BallType.create(6)
+   local bt = BallType.create(6, "ball1")
    for i = 1, (2^7) do
       for j = 1, (2^6) do
 	 
@@ -101,24 +101,61 @@ function createWorld()
    end
    
    bt:calc()
+   bt:save(w.scene)
    
-   bt:save("anna", "ball1")
-   
-   local bt = BallType.create(4)
+   local bt = BallType.create(4, "torso1")
    for i = 1, (2^5) do
       for j = 1, (2^4) do
 	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
       end
    end
-   
-   bt:calc()
-   
-   bt:save("anna", "torso1")
-   bt:save("anna", "head1")
-   bt:save("anna", "leftLeg1")
-   bt:save("anna", "rightLeg1")
-   bt:save("anna", "leftArm1")
-   bt:save("anna", "rightArm1")
+   bt:calc()   
+   bt:save(w.scene)
+
+   local bt = BallType.create(4, "rightArm1")
+   for i = 1, (2^5) do
+      for j = 1, (2^4) do
+	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
+      end
+   end
+   bt:calc()   
+   bt:save(w.scene)
+
+   local bt = BallType.create(4, "leftArm1")
+   for i = 1, (2^5) do
+      for j = 1, (2^4) do
+	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
+      end
+   end
+   bt:calc()   
+   bt:save(w.scene)
+
+   local bt = BallType.create(4, "rightLeg1")
+   for i = 1, (2^5) do
+      for j = 1, (2^4) do
+	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
+      end
+   end
+   bt:calc()   
+   bt:save(w.scene)
+
+   local bt = BallType.create(4, "leftLeg1")
+   for i = 1, (2^5) do
+      for j = 1, (2^4) do
+	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
+      end
+   end
+   bt:calc()   
+   bt:save(w.scene)
+
+   local bt = BallType.create(4, "head1")
+   for i = 1, (2^5) do
+      for j = 1, (2^4) do
+	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
+      end
+   end
+   bt:calc()   
+   bt:save(w.scene)
 
    print("Balls created and saved")
 

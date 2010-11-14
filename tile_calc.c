@@ -47,7 +47,7 @@ static inline void interpolate( scene_t * s,
 	
     int x_pos = HID_GET_X_POS(hid);
     int y_pos = HID_GET_Y_POS(hid);
-    int color[3];
+    int color[]={0,0,0};
     
     
     for( i=0; i<5; i++ )
@@ -91,6 +91,7 @@ static inline void interpolate( scene_t * s,
     hm->color[0] = color[0]/tot_factor;
     hm->color[1] = color[1]/tot_factor;
     hm->color[2] = color[2]/tot_factor;
+
 } 
 
 /**
@@ -128,6 +129,7 @@ static void tile_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat 
     int nid_x = hid_x >> w_diff;
     int nid_y_width=1;
     int nid_y = hid_y >> w_diff;
+
     if((nid_x<<w_diff == hid_x) && nid_x != 0)
     {
 	nid_x--;
@@ -152,7 +154,6 @@ static void tile_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat 
 	}
 	
     }
-    
 }
 
 
@@ -164,8 +165,8 @@ static void tile_calc_add_node_error(scene_t *s, int level, hid_t ohid, GLfloat 
 static void tile_calc_node_distortion(scene_t *s, int level_count)
 {
     int i, j, lvl, k;
-    GLfloat avg[]={0,0,0,0,0,0,0,0};
-    int avg_count[]={0,0,0,0,0,0,0,0};
+    GLfloat avg[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    int avg_count[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     int count=0;
     
     for(i=0; i< (1<<level_count); i++)
@@ -174,6 +175,9 @@ static void tile_calc_node_distortion(scene_t *s, int level_count)
 	{
 	    hid_t ohid;
 	    HID_SET(ohid, level_count-1, i, j);
+	    assert(i == HID_GET_X_POS(ohid));
+	    assert(j == HID_GET_Y_POS(ohid));
+	    
 	    GLfloat org_height = scene_hid_lookup(s, ohid)->height;
 	    GLfloat x_pos = scene_hid_x_coord(s, ohid);
 	    GLfloat y_pos = scene_hid_y_coord(s, ohid);
@@ -188,6 +192,7 @@ static void tile_calc_node_distortion(scene_t *s, int level_count)
 		
 		avg[lvl] += fabs(approx_height-org_height);
 		assert(!isnan(avg[lvl]));
+
 //		printf("%.2f\n", avg[lvl]);
 	    }
 	    count++;

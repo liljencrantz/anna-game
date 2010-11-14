@@ -3,6 +3,13 @@ apt-get install \
  lua5.1-doc \
  liblua5.1-0-dev \
  libsdl1.2-dev \
- libsdl-image1.2-dev 
-make
+ libsdl-image1.2-dev \
+ libglew1.5-dev
+
+mkdir -p data/anna/terrain
+mkdir -p data/anna/ball_type
+mkdir -p data/anna/tree
+mkdir -p data/anna/tree_type
+mkdir -p data/anna/item
+
 ./anna

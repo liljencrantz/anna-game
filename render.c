@@ -147,11 +147,11 @@ void render( scene_t *s )
     render_setup_camera(s);
     render_terrain_start(s);
 
-    render_balls(s);
     render_trees_trunk(s);
     render_trees_leaves(s);
     render_boids(s);
     render_terrain_finish(s);
+    render_balls(s);
     
     glPopMatrix();
 //    printf("Rendered %d tiangles\n", s->triangle_count);

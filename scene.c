@@ -1153,10 +1153,10 @@ int scene_ball_create(
 	idx++;
     
     ball_t *t = &s->ball[idx];
-    
+/*    
     printf("Create ball %d named %s\n",
 	   t, ball_type_name);
-    
+*/  
     scene_ball_type_get(s, ball_type_name, &(t->type));
     assert(!t->type);
     

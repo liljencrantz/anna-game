@@ -190,8 +190,8 @@ static void *check_item (lua_State *L, int index, char *type_name)
 static int lua_tree_create (lua_State *L)
 {
     int *res = (int *)lua_newuserdata(L, sizeof(int));
-    luaL_getmetatable(L, "TreePeer");
-    lua_setmetatable(L, -2);    
+    luaL_getmetatable(L, "TreeStem");
+    lua_setmetatable(L, -2);
     float pos[] = 
 	{
 	    luaL_checknumber(L, 3),
@@ -231,8 +231,9 @@ static int lua_ball_type_create (lua_State *L)
     lua_setmetatable(L, -2);    
     
     *res = ball_type_create(
-	luaL_checknumber(L, 1),
+	maxi(0,mini(BALL_LEVEL_MAX,luaL_checknumber(L, 1))),
 	luaL_checkstring(L, 2),
+	maxf(0.0,minf(1.0,luaL_checknumber(L, 3)))*255,
 	allocfn_calloc);
     
     return 1;
@@ -652,7 +653,7 @@ void register_types(
     
     register_type(
 	L,
-	"TreePeer", 
+	"TreeStem", 
 	tree_methods, 
 	tree_meta_methods,
 	tree_getters,

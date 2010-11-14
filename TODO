@@ -1,23 +1,23 @@
-Performance:
 
-* Use VBOs with primitive restart to render interpolated balls.
-* Move ball interpolation into separate thread.
-* Move rendering into separate thread, reserve main thread for AI, physics, etc.
+Performance
+
+* Use fewer VBOs and primitive restart to render interpolated balls
+* Move ball interpolation into separate thread
+* Move rendering into separate thread, reserve main thread for AI, physics, etc
+
 
 World
 
-* Loading and unloading of tiles for trees and other items
-* Start supporting multiple ball and tree types
-* Enable better ball and tree editing from Lua
+* Start supporting multiple tree types
+* Enable better tree editing from Lua
 * Collision objects, e.g. trees
-* Multiple actor objects
-* Clean up Lua bindings - drop the peers and use raw objects directly
+* Clean up Lua bindings - drop the peer naming, make bindings mor complete
 * Reference counting for tree types, ball types, etc
+
 
 Art
 
 * Balls should use textures, not vertex colors
-* Switch to using VBOs for
 * Skybox
 * Clouds
 * Stars

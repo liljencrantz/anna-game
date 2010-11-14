@@ -12,7 +12,7 @@
 #include "vertex_data.h"
 
 #define BALL_COUNT(levels) (2*(0x55555555 & ((1<<(2*(levels+1)))-1)))
-#define BALL_SCALE_THRESHOLD 1.4
+#define BALL_SCALE_THRESHOLD 1.2
 
 float ball_normal[BALL_COUNT(BALL_LEVEL_MAX)][3];
 
@@ -68,7 +68,7 @@ static inline void plain_vertex(
 	b->data[idx].color[0],
 	b->data[idx].color[1],
 	b->data[idx].color[2],
-	255);
+	b->alpha);
 
     vd_add_index(
 	vd,
@@ -102,7 +102,9 @@ static inline void scale_vertex_sub(
 	f1*b->data[idx1].color[0] + ff2*(b->data[idx2].color[0] + b->data[idx3].color[0]),
 	f1*b->data[idx1].color[1] + ff2*(b->data[idx2].color[1] + b->data[idx3].color[1]),
 	f1*b->data[idx1].color[2] + ff2*(b->data[idx2].color[2] + b->data[idx3].color[2]),
-	255);
+	b->alpha);
+    
+
     
     vd_add_index(
 	&rb_vd,
@@ -135,7 +137,7 @@ static inline void scale_vertex1(
 	f1*b->data[idx1].color[0] + f2*b->data[idx2].color[0],
 	f1*b->data[idx1].color[1] + f2*b->data[idx2].color[1],
 	f1*b->data[idx1].color[2] + f2*b->data[idx2].color[2],
-	255
+	b->alpha
 	);
     
     vd_add_index(
@@ -298,7 +300,10 @@ void render_balls(scene_t *s)
     glEnable(GL_LIGHTING);
     glEnable(GL_RESCALE_NORMAL);
     glShadeModel(GL_SMOOTH);
-    
+
+    glEnable (GL_BLEND); 
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
+
     glEnable(GL_LIGHT0);
     
 // Create light components
@@ -330,6 +335,7 @@ void render_balls(scene_t *s)
 	
     }
     
+    glDisable(GL_BLEND); 
     glDisable(GL_LIGHT0);
     glDisable( GL_CULL_FACE );
     glDisable(GL_LIGHTING);

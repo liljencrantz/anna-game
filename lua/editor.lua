@@ -1,7 +1,7 @@
 module("editor", package.seeall)
 
 function florp()
-   return 0.09*(2*math.random()-1.0);
+   return 0.09*(2*math.random()-1.0)
 end
 
 function terrainDiamond(sc, lvl, x1, y1, x2, y2)
@@ -79,7 +79,7 @@ function createWorld()
    w.scene:saveTerrain()
    print("Terrain saved")
 
-   local bt = BallType.create(6, "ball1")
+   local bt = BallType.create(6, "ball1",0.65)
    for i = 1, (2^7) do
       for j = 1, (2^6) do
 	 
@@ -103,7 +103,7 @@ function createWorld()
    bt:calc()
    bt:save(w.scene)
    
-   local bt = BallType.create(4, "torso1")
+   local bt = BallType.create(4, "torso1",1)
    for i = 1, (2^5) do
       for j = 1, (2^4) do
 	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
@@ -112,7 +112,7 @@ function createWorld()
    bt:calc()   
    bt:save(w.scene)
 
-   local bt = BallType.create(4, "rightArm1")
+   local bt = BallType.create(4, "rightArm1",1)
    for i = 1, (2^5) do
       for j = 1, (2^4) do
 	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
@@ -121,7 +121,7 @@ function createWorld()
    bt:calc()   
    bt:save(w.scene)
 
-   local bt = BallType.create(4, "leftArm1")
+   local bt = BallType.create(4, "leftArm1",1)
    for i = 1, (2^5) do
       for j = 1, (2^4) do
 	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
@@ -130,7 +130,7 @@ function createWorld()
    bt:calc()   
    bt:save(w.scene)
 
-   local bt = BallType.create(4, "rightLeg1")
+   local bt = BallType.create(4, "rightLeg1",1)
    for i = 1, (2^5) do
       for j = 1, (2^4) do
 	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
@@ -139,7 +139,7 @@ function createWorld()
    bt:calc()   
    bt:save(w.scene)
 
-   local bt = BallType.create(4, "leftLeg1")
+   local bt = BallType.create(4, "leftLeg1",1)
    for i = 1, (2^5) do
       for j = 1, (2^4) do
 	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
@@ -148,7 +148,7 @@ function createWorld()
    bt:calc()   
    bt:save(w.scene)
 
-   local bt = BallType.create(4, "head1")
+   local bt = BallType.create(4, "head1",1)
    for i = 1, (2^5) do
       for j = 1, (2^4) do
 	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
@@ -161,17 +161,18 @@ function createWorld()
 
 
    print("Creating trees...")
-   for i = 11, 790, 4 do
-      for j = 11, 790, 4 do
+   for i = 11, 790, 12 do
+      for j = 11, 790, 12 do
 	 local x = i+5*math.sin(0.1*j)
 	 local y = j+5*math.sin(0.1*i)
 	 
 	 local h = w.scene:getTerrainElement(10,x,y) or 1000
-	 if h < 10 and (x/30)%2 >= 1 then
+	 if h < 10 and (i/40)%2 >= 1 then
 	    w.scene:createTree(
 	       "tree1", 
 	       x, y,
-	       (i*10+j*13)%360, 1 + 0.3*math.random());
+	       (i*10+j*13)%360, 
+	       1 + 0.3*math.random())
 	 end
       end
    end

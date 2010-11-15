@@ -800,7 +800,7 @@ void anna_lua_init()
     luaL_openlibs(L);
     
     register_types(L);
-    int status = luaL_loadfile(L, "lua/main.lua");
+    int status = luaL_loadfile(L, "lua/anna/main.lua");
     if (status) {
         /* If something went wrong, error message is at the top of */
         /* the stack */

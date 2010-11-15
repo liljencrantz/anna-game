@@ -1,8 +1,5 @@
 module("input", package.seeall)
 
-require("anna")
-require("actor")
-
 ARROW_LEFT = 276
 ARROW_DOWN = 274
 ARROW_RIGHT = 275

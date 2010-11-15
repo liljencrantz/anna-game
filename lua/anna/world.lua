@@ -1,7 +1,5 @@
 module("world", package.seeall)
 
-require("anna")
-
 CAMERA_DISTANCE = 5.0
 
 World = {}

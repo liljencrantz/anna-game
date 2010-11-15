@@ -1,12 +1,13 @@
 module("anna", package.seeall)
 
-require("lua/util")
-require("lua/world")
-require("lua/actor")
-require("lua/input")
 require("math")
-require("lua/editor")
-require("lua/transform")
+
+require("lua/anna/util")
+require("lua/anna/world")
+require("lua/anna/actor")
+require("lua/anna/input")
+require("lua/anna/editor")
+require("lua/anna/transform")
 
 function initWorld()
 
@@ -27,9 +28,8 @@ function initWorld()
 	    local b = BallPeer.create(w.scene, "ball1", 1.8);
 	    b:setLocation(w.scene, x,y,h+1.1,0,0,0);	    
 	 end
-      end
-   end
-
+      end   end
+   
    return w
 end
 

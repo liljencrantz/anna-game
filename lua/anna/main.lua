@@ -17,7 +17,7 @@ function initWorld()
    actor.Actor.create(w, "Hasse");
    
    boid = BoidSetPeer.create(w.scene, 40, 40, 40);
-   
+--[[   
    for i = 11, 110, 12 do
       for j = 11, 110, 12 do
 	 local x = i+5*math.sin(0.1*j)
@@ -29,7 +29,7 @@ function initWorld()
 	    b:setLocation(w.scene, x,y,h+1.1,0,0,0);	    
 	 end
       end   end
-   
+]]--
    return w
 end
 

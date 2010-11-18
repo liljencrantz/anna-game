@@ -212,7 +212,9 @@ void render_ball(scene_t *s, ball_t *t)
     glPushMatrix();
     
     GLfloat view_dir[3];
-    subtract(t->pos, s->camera.pos, view_dir, 3);
+    GLfloat *t_pos = &t->transform[12];
+        
+    subtract(t_pos, s->camera.pos, view_dir, 3);
 
     GLfloat corr = render_height_correct(
 	view_dir[0],
@@ -231,12 +233,16 @@ void render_ball(scene_t *s, ball_t *t)
 	prev_error = error;
     }
 
+/*
     glTranslatef( t->pos[0], t->pos[1], t->pos[2]+corr);
     glRotatef( t->angle1, 0.0f, 0.0f, 1.0f );
     glRotatef( t->angle2, 0.0f, 1.0f, 0.0f );
     glRotatef( t->angle3, 1.0f, 0.0f, 0.0f );
     glTranslatef( t->offset[0], t->offset[1], t->offset[2]);
+ */
+    glMultMatrixf(t->transform);
     glScalef(t->scale, t->scale, t->scale);
+   
     glPointSize(5.0);
     
     glColor4f(1,0,0,1);
@@ -325,7 +331,8 @@ void render_balls(scene_t *s)
 	    count++;
 	    if(ball->type)
 	    {
-		ball->visible = scene_is_visible(s,ball->pos, ball->scale);
+		GLfloat *t_pos = &ball->transform[12];
+		ball->visible = scene_is_visible(s,t_pos, ball->scale);
 		if(ball->visible)
 		    render_ball(s, ball);
 		if(count >= scene_ball_get_count(s))

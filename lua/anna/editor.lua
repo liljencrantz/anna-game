@@ -151,7 +151,10 @@ function createWorld()
    local bt = BallType.create(4, "head1",1)
    for i = 1, (2^5) do
       for j = 1, (2^4) do
-	 bt:setElement(i, j, 0.8 + 0.2*math.cos(j*math.pi*2 / (2^4)), 0.5, 0.4, 0.2)
+	 bt:setElement(
+	    i, j, 
+	    0.9 + 0.1*math.cos(j*math.pi*2 / (2^4)), 
+	    0.5, 0.4, 0.2)
       end
    end
    bt:calc()   

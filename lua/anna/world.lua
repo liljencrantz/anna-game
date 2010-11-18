@@ -6,9 +6,8 @@ World = {}
 
 function World.create(name, load)
    local self = {}
-   for key, val in pairs(World) do
-      self[key] = val
-   end
+   setmetatable(self, {__index=World})
+
    self.scene = anna.Scene.create(name, load)
    self.active = true
    

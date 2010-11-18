@@ -2,7 +2,7 @@ module("transform", package.seeall)
 
 Transform = {}
 
-function Transform.create(orig)
+function Transform.create(scene,orig)
    local self = {}
    setmetatable(self, {
 		   
@@ -59,6 +59,7 @@ function Transform.create(orig)
 
 
 		})
+   self.scene=scene
    if orig then
       local arr = orig
       if arr.arr then
@@ -72,9 +73,50 @@ function Transform.create(orig)
 end
 
 function Transform:translate(x,y,z)
-   self.arr[13] = self.arr[13] + x
-   self.arr[14] = self.arr[14] + y
-   self.arr[15] = self.arr[15] + z
+   m = {
+      1,0,0,0,
+      0,1,0,0,
+      0,0,1,0,
+      x,y,z,1}
+--   self.arr[13] = self.arr[13] + x
+--   self.arr[14] = self.arr[14] + y
+--   self.arr[15] = self.arr[15] + z
+   local a = self.arr
+--   self.arr=m
+   return self:multiply(m)
+end
+
+function Transform:rotateX(a)
+   c = math.cos(a*math.pi/180)
+   s = math.sin(a*math.pi/180)
+   m = {
+      1,0,0,0,
+      0,c,-s,0,
+      0,s,c,0,
+      0,0,0,1}
+   return self:multiply(m)
+end
+
+function Transform:rotateY(a)
+   c = math.cos(a*math.pi/180)
+   s = math.sin(a*math.pi/180)
+   m = {
+      c,0,s,0,
+      0,1,0,0,
+      -s,0,c,0,
+      0,0,0,1}
+   return self:multiply(m)
+end
+
+function Transform:rotateZ(a)
+   c = math.cos(a*math.pi/180)
+   s = math.sin(a*math.pi/180)
+   m = {
+      c,-s,0,0,
+      s,c,0,0,
+      0,0,1,0,
+      0,0,0,1}
+   return self:multiply(m)
 end
 
 function Transform:set(v)
@@ -90,6 +132,30 @@ function Transform:identity(v)
 end
 
 function Transform:transform(o)
-   o.setTransform(unpack(self.arr))
+   o:setTransform(self.scene,unpack(self.arr))
 end
+
+function Transform:multiply(t)
+
+   if t.arr then
+      t = t.arr
+   end
+   
+   local res = {
+      0,0,0,0,
+      0,0,0,0,
+      0,0,0,0,
+      0,0,0,0}
+   
+   for x = 1,4 do
+      for y= 1,4 do
+	 for a = 1,4 do
+	    res[y+4*(x-1)] = res[y+4*(x-1)] + self.arr[y+4*(a-1)]*t[a+4*(x-1)]
+	 end
+      end
+   end
+   self.arr = res
+   return self
+end
+
 

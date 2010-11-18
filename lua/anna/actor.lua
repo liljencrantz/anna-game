@@ -214,8 +214,8 @@ function Actor:animationInit()
    for partName, partData in pairs(self.body) do
       local a={0,0,0}
       off = self.body[partName].roffset
-      self.body[partName].ball:setOffset(
-	 self.world.scene, unpack(off))
+--      self.body[partName].ball:setOffset(
+--	 self.world.scene, unpack(off))
    end      
 
    
@@ -253,12 +253,21 @@ function Actor:animate()
       local off = self.body[partName].offset
       local x = off[1]*f1 - off[2]*f2
       local y = off[1]*f2 + off[2]*f1
-
+      
+      local t = transform.Transform.create(self.world.scene)
+      t:translate(self.pos[1]+x, self.pos[2]+y, self.pos[3]+off[3])
+--      print(t)
+      t:rotateZ(-(self.angle+a[1]))
+      t:rotateY(-a[2])
+      t:rotateX(-a[3])
+      t:translate(unpack(partData.roffset))
+      t:transform(partData.ball)
+--[[
       self.body[partName].ball:setLocation(
 	 self.world.scene, 
 	 self.pos[1]+x, self.pos[2]+y, self.pos[3]+off[3], 
 	 self.angle+a[1],a[2],a[3])
-
+]]--
    end
 end
    

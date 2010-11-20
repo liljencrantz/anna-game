@@ -5,11 +5,13 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <errno.h>
 
 #include <lua5.1/lua.h>
 #include <lua5.1/lauxlib.h>
 #include <lua5.1/lualib.h>
 
+#include "luauser.h"
 #include "scene.h"
 #include "tree.h"
 #include "ball.h"
@@ -576,6 +578,30 @@ static int lua_screen_swap_buffers(lua_State *L)
     return 0;
 }
 
+static void *lua_createthread_inner(void*data) {
+    lua_State *L = (lua_State *) data;
+
+    int result = lua_pcall(L, 0, LUA_MULTRET, 0);
+    if (result) {
+        fprintf(stderr, "THREAD: Failed to run script: %s\n", lua_tostring(L, -1));
+        exit(1);
+    }
+}
+
+static int lua_createthread(lua_State *L) {
+    lua_State *tL = lua_newthread(L);
+    lua_pushvalue(L, -2);
+    lua_xmove(L, tL, 1);
+
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, lua_createthread_inner, tL) != 0) {
+        printf("THREAD: Warning: Unable to create thread: %s\n", strerror(errno));
+        exit(1);
+    }
+
+    return 1;
+}
+
 
 
 void register_types(
@@ -775,6 +801,7 @@ void register_types(
 	boid_set_setters);
 
 
+    lua_register(L, "createthread", lua_createthread);
 }
 
     
@@ -793,6 +820,8 @@ void anna_lua_run()
 
 void anna_lua_init()
 {
+    annalua_initlock();
+
     L = lua_open();
     luaL_openlibs(L);
     

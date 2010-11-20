@@ -29,9 +29,9 @@ typedef struct
 typedef struct 
 {
     GLfloat transform[16];
-    GLfloat radius;
-    ball_type_t *type;
     GLfloat scale;
+    ball_type_t *type;
+    GLfloat radius;
     int visible;    
 }
     ball_t;

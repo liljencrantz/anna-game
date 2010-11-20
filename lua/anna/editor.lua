@@ -173,8 +173,6 @@ function createWorld()
 	 if h < 10 and (i/40)%2 >= 1 then
 	    w.scene:createTree(
 	       "tree1", 
-	       x, y,
-	       (i*10+j*13)%360, 
 	       1 + 0.3*math.random())
 	 end
       end

@@ -43,15 +43,12 @@ typedef struct
 
 struct tree
 {
+    GLfloat transform[16];
+    GLfloat scale;
     tree_type_t *type;
     
-    GLfloat pos[3];
     GLfloat angle;
-    GLfloat radius;
-    
-    GLfloat scale;
     int visible;    
-    int ball_idx[TREE_BALL_MAX];
 };
 
 typedef struct tree tree_t;

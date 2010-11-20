@@ -9,3 +9,4 @@ tile_test
 *.err
 tree_branch_data.c
 data
+core

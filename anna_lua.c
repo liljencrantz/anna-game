@@ -192,20 +192,11 @@ static int lua_tree_create (lua_State *L)
     int *res = (int *)lua_newuserdata(L, sizeof(int));
     luaL_getmetatable(L, "TreeStem");
     lua_setmetatable(L, -2);
-    float pos[] = 
-	{
-	    luaL_checknumber(L, 3),
-	    luaL_checknumber(L, 4)
-	}
-    ;
     
     *res = scene_tree_create(
 	(scene_t *)lua_topointer(L, 1),
 	(char *)luaL_checkstring(L, 2),
-	pos,
-	luaL_checknumber(L, 5),
-	luaL_checknumber(L, 6));
-
+	luaL_checknumber(L, 3));
     return 1;
 }
 
@@ -232,7 +223,7 @@ static int lua_ball_type_create (lua_State *L)
     
     *res = ball_type_create(
 	maxi(0,mini(BALL_LEVEL_MAX,luaL_checknumber(L, 1))),
-	luaL_checkstring(L, 2),
+	(char *)luaL_checkstring(L, 2),
 	maxf(0.0,minf(1.0,luaL_checknumber(L, 3)))*255,
 	allocfn_calloc);
     
@@ -343,6 +334,38 @@ static int lua_ball_set_transform(lua_State *L)
     return 0;
 }
 
+static int lua_tree_set_transform(lua_State *L)
+{
+    int *t = (int *)check_item(L, 1, "TreeStem");
+    scene_t *s = (scene_t *)check_item(L, 2, "Scene");
+    tree_t *b = scene_tree_get(s, *t);
+
+    b->transform[0] = luaL_checknumber(L, 3);
+    b->transform[1] = luaL_checknumber(L, 4);	
+    b->transform[2] = luaL_checknumber(L, 5);
+    b->transform[3] = luaL_checknumber(L, 6);
+    b->transform[4] = luaL_checknumber(L, 7);
+    b->transform[5] = luaL_checknumber(L, 8);
+    b->transform[6] = luaL_checknumber(L, 9);
+    b->transform[7] = luaL_checknumber(L, 10);
+    b->transform[8] = luaL_checknumber(L, 11);
+    b->transform[9] = luaL_checknumber(L, 12);
+    b->transform[10] = luaL_checknumber(L, 13);
+    b->transform[11] = luaL_checknumber(L, 14);
+    b->transform[12] = luaL_checknumber(L, 15);
+    b->transform[13] = luaL_checknumber(L, 16);
+    b->transform[14] = luaL_checknumber(L, 17);
+    b->transform[15] = luaL_checknumber(L, 18);
+/*
+    printf("Set position of tree %d to %f %f %f\n",
+	   *(int *)check_item(L, 1, "TreeStem"),
+	   luaL_checknumber(L, 15),
+	   luaL_checknumber(L, 16),
+	   luaL_checknumber(L, 17));
+*/
+    return 0;
+}
+
 
 
 static int lua_ball_destroy(lua_State *L)
@@ -363,7 +386,7 @@ static int lua_scene_create (lua_State *L)
     luaL_getmetatable(L, "Scene");
     lua_setmetatable(L, -2);
     
-    const char *name = luaL_checkstring(L,1);    scene_init(res, name, lua_toboolean(L, 2));
+    char *name = (char *)luaL_checkstring(L,1);    scene_init(res, name, lua_toboolean(L, 2));
 //    load_temp_tile_data(res);
     
 //    camera_move(res);    
@@ -379,10 +402,8 @@ static int lua_scene_configure(lua_State *L)
     scene_configure(
 	s, 
 	luaL_checkint(L, 2),
-	luaL_checknumber(L, 3),
-	luaL_checkint(L, 4),
-	luaL_checkint(L, 5));
-        
+	luaL_checknumber(L, 3));
+            
     return 0;
 }
 
@@ -403,17 +424,9 @@ static int lua_scene_create_tree(lua_State *L)
     scene_tree_create(
 	s,
 	name,
-	pos,
-	angle, scale
+	scale
 	);
     
-    return 0;
-}
-
-static int lua_scene_save_items(lua_State *L)
-{
-    scene_t *s = (scene_t *)check_item(L, 1, "Scene");
-    scene_save_items(s);
     return 0;
 }
 
@@ -603,7 +616,6 @@ void register_types(
 	{"getHeight", lua_scene_get_height},
 	{"getSlope", lua_scene_get_slope},
 	{"createTree", lua_scene_create_tree},
-	{"saveItems", lua_scene_save_items},
 	{0,0}
     };
 
@@ -629,6 +641,7 @@ void register_types(
     
     static const luaL_reg tree_methods[] = {
 	{"create", lua_tree_create},	
+	{"setTransform", lua_tree_set_transform},	
 	{0,0}
     };
 

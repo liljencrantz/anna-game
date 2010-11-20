@@ -138,6 +138,7 @@ static void render_setup_camera(scene_t *s)
 
 void render( scene_t *s )
 {
+    
     scene_update(s);
 
     s->triangle_count = 0;
@@ -148,7 +149,6 @@ void render( scene_t *s )
     render_terrain_start(s);
 
     render_trees_trunk(s);
-    render_trees_leaves(s);
     render_boids(s);
     render_terrain_finish(s);
     render_balls(s);

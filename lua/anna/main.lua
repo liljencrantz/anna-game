@@ -8,6 +8,7 @@ require("lua/anna/actor")
 require("lua/anna/input")
 require("lua/anna/editor")
 require("lua/anna/transform")
+require("lua/anna/tree")
 
 function initWorld()
 
@@ -17,7 +18,7 @@ function initWorld()
    actor.Actor.create(w, "Hasse");
    
    boid = BoidSetPeer.create(w.scene, 40, 40, 40);
---[[   
+
    for i = 11, 110, 12 do
       for j = 11, 110, 12 do
 	 local x = i+5*math.sin(0.1*j)
@@ -25,11 +26,10 @@ function initWorld()
 	 local h = w.scene:getTerrainElement(10,x,y) or 1000
 	 
 	 if h < 10 and (i/40)%2 >= 1 then
-	    local b = BallPeer.create(w.scene, "ball1", 1.8);
-	    b:setLocation(w.scene, x,y,h+1.1,0,0,0);	    
+	    local t = tree.Tree.create(w, "ball1", 1.8, {x,y,h});
 	 end
       end   end
-]]--
+
    return w
 end
 

@@ -322,8 +322,13 @@ void render_balls(scene_t *s)
     glEnable ( GL_COLOR_MATERIAL ) ;
     
     int count = 0;    
-    for(i=0;; i++)
+
+    if(scene_ball_get_count(s))
     {
+	    for(i=0;; i++)
+    {
+	assert(i < SCENE_BALL_MAX);
+	
 	ball_t *ball = scene_ball_get(s, i);
 
 	if(ball)
@@ -331,15 +336,17 @@ void render_balls(scene_t *s)
 	    count++;
 	    if(ball->type)
 	    {
+    
 		GLfloat *t_pos = &ball->transform[12];
 		ball->visible = scene_is_visible(s,t_pos, ball->scale);
 		if(ball->visible)
 		    render_ball(s, ball);
-		if(count >= scene_ball_get_count(s))
-		    break;
 	    }
+	    if(count >= scene_ball_get_count(s))
+		break;
 	}
-	
+    }
+	    
     }
     
     glDisable(GL_BLEND); 

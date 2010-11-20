@@ -23,20 +23,6 @@
 
 #define ITEM_TILE_SIZE 50
 
-typedef struct
-{
-    size_t count;
-    ball_t ball[];
-}
-    ball_tile_t;
-
-typedef struct
-{
-    size_t count;
-    tree_t tree[];
-}
-    tree_tile_t;
-
 /**
    The scene object is rather large, because it contains statically
    allocated memory used for storing trees, balls, boids, etc. The
@@ -71,10 +57,12 @@ typedef struct
     void *load_state;
     
     hash_table_t ball_type;
+    hash_table_t tree_type;
     
-    ball_tile_t **ball_tile;
-
-    tree_tile_t **tree_tile;
+    tree_t tree[SCENE_TREE_MAX];
+    int tree_used[SCENE_TREE_MAX/32];
+    size_t tree_search_start;
+    size_t tree_count;
     
     ball_t ball[SCENE_BALL_MAX];
     int ball_used[SCENE_BALL_MAX/32];
@@ -129,8 +117,7 @@ void scene_init(scene_t *s, char *name, int load);
  */
 void scene_configure(
     scene_t *s,
-    int tile_levels, float scene_size,
-    int max_tree_count, int max_item_count );
+    int tile_levels, float scene_size);
 
 
 /**
@@ -187,7 +174,7 @@ int scene_nid_is_visible(scene_t *s, nid_t nid, view_t *pos);
 int scene_is_visible(scene_t *s, float *pos, float radius);
 
 /**
-   Return the total number of trees in the scene
+   Return the total number of trees currently loaded into the scene
  */
 size_t scene_tree_get_count(scene_t *s);
 
@@ -197,8 +184,6 @@ size_t scene_tree_get_count(scene_t *s);
 int scene_tree_create(
     scene_t *s,
     char *tree_type_name,
-    float *pos,
-    float angle,
     float scale);
 
 void scene_save_items(scene_t *s);

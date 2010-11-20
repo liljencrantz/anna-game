@@ -19,7 +19,7 @@ tree_t tree[32];
 void render_section(tree_section_t *sec, GLfloat *view_dir)
 {
     GLfloat side_dir[3];
-
+    
     cross_prod(view_dir, sec->normal, side_dir);
     multiply_s(side_dir, 0.5*sec->width, side_dir, 3);
     
@@ -57,123 +57,20 @@ void render_section(tree_section_t *sec, GLfloat *view_dir)
     
 }
 
-void render_tree_leaves(scene_t *s, tree_t *t)
-{
-    return;
-    
-    float middle[]={988,843};
-    
-    float vec[][2]={
-	{682,1285},
-	{597,1183},
-	{514,1192},
-	{423,1140},
-	{406,1014},
-	{462,984},
-	{388,898},
-	{436,859},
-	{412,775},
-	{465,730},
-	{471,669},
-	{406,634},
-	{393,532},
-	{513,484},
-	{574,528},
-	{636,528},
-	{699,444},
-	{822,459},
-	{903,567},
-	{912,493},
-	{1039,480},
-	{1047,523},
-	{1158,537},
-	{1158,570},
-	{1219,570},
-	{1234,639},
-	{1260,636},
-	{1369,802},
-	{1329,847},
-	{1363,955},
-	{1327,1008},
-	{1365,1120},
-	{1269,1245},
-	{1327,1294},
-	{1212,1405},
-	{1206,1495},
-	{1066,1518},
-	{973,1464},
-	{898,1345},
-	{909,1203},
-	{790,1104}
-    };
-    
-
-    int vec_count = sizeof(vec)/sizeof(*vec);
-    float scale = 0.0042;
-    
-    
-    glPushMatrix();
-    GLfloat view_dir[3];
-    subtract(t->pos, s->camera.pos, view_dir, 3);
-    GLfloat corr = render_height_correct(view_dir[0],
-					 view_dir[1]);
-    
-//    view_dir[2]-= corr;
-    
-    glTranslatef( t->pos[0], t->pos[1]-0.0, t->pos[2]+corr+ 3.3);
-    glRotatef(t->angle, 0,0,1);
-    rotate_z(view_dir, -t->angle*M_PI/180);
-    //normalize(view_dir, view_dir, 3);
-    glColor4f(0.2,0.4,0.1,1);
-    
-    glBegin( GL_TRIANGLE_FAN );
-    float up[]=
-	{
-	    0,0,1
-	}
-    ;
-    float side[3];
-    cross_prod(view_dir, up, side);
-    normalize(side,side,3);
-    
-    int i;
-    glVertex3f(-3.8*side[1],3.8*side[0],0);
-
-#define LALA 0.0
-    for(i=0; i<vec_count; i++)
-    {
-	float y = LALA * side[0] - (vec[i][0]-middle[0])*scale*side[1];
-	float x = -LALA * side[1] - (vec[i][0]-middle[0])*scale*side[0];
-	float z = (middle[1]-vec[i][1])*scale;
-	glVertex3f(x,y,z);
-    }    
-    {
-	float y = LALA * side[0] - (vec[0][0]-middle[0])*scale*side[1];
-	float x = -LALA * side[1] - (vec[0][0]-middle[0])*scale*side[0];
-	float z = (middle[1]-vec[0][1])*scale;
-	glVertex3f(x,y,z);
-    }
-    glEnd();
-    
-    glPopMatrix();
-    
-}
-
-
 void render_tree_trunk(scene_t *s, tree_t *t)
 {
 
     glPushMatrix();
 
     GLfloat view_dir[3];
-    subtract(t->pos, s->camera.pos, view_dir, 3);
+    GLfloat *t_pos = &t->transform[12];
+    subtract(t_pos, s->camera.pos, view_dir, 3);
     GLfloat corr = render_height_correct(view_dir[0],
 					 view_dir[1]);
     
 //    view_dir[2]-= corr;
     
-    glTranslatef( t->pos[0], t->pos[1], t->pos[2]+corr);
-    glRotatef(t->angle, 0,0,1);
+    glMultMatrixf(t->transform);
     glColor3f(0.2,0.2,0.05);
 
     //printf("LALA %.2f\n", t->angle);
@@ -225,7 +122,7 @@ void render_tree_trunk(scene_t *s, tree_t *t)
 	    render_section(&t->type->section[i], view_dir);
 	}
     }
-	    glEnd();
+    glEnd();
     
     glPopMatrix();
 
@@ -282,43 +179,32 @@ void render_trees_trunk(scene_t *s)
 
     int i;
     int count=0;
-
-    int my_x = s->camera.pos[0]/ITEM_TILE_SIZE;
-    int my_y = s->camera.pos[1]/ITEM_TILE_SIZE;
-
-    int x, y;
-    int steps = RENDER_DISTANCE/ITEM_TILE_SIZE;
     
-    int side = ceilf(s->scene_size/ITEM_TILE_SIZE);
-
-    for( x = my_x-steps; x <= my_x+steps; x++)
+    if(scene_tree_get_count(s))
     {
-	if( x < 0 || x >= side)
-	    continue;
-	
-	for( y = my_y-steps; y <= my_y+steps; y++)
+	for(i=0;; i++)
 	{
-	    if( y < 0 || y >= side)
-		continue;
-	
-	    int my_idx = x + y * side;	    
+	    tree_t *tree = scene_tree_get(s, i);
 	    
-	    if(s->tree_tile[my_idx])
+	    if(tree)
 	    {
-		for(i=0; i<s->tree_tile[my_idx]->count; i++)
+		count++;
+		if(tree->type)
 		{
-		    tree_t *tree = &s->tree_tile[my_idx]->tree[i];
-		    assert(tree);
-		    
-		    tree->visible = scene_is_visible(s,tree->pos, 3);
+//		    printf("We have a tree to render!\n");
+
+		    GLfloat *t_pos = &tree->transform[12];
+		    tree->visible = scene_is_visible(s,t_pos, tree->scale);
 		    if(tree->visible)
 			render_tree_trunk(s, tree);
 		}
+		if(count >= scene_tree_get_count(s))
+		    break;
+		
 	    }
-	    
 	}
+	
     }
-    
 
     //  glDepthMask( GL_TRUE );
 //    glDisable(GL_TEXTURE_2D);

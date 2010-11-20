@@ -330,97 +330,6 @@ static ssize_t scene_find_unneeded_tile(
 	s, s->root_tile, sub);
 }
 
-static tree_tile_t *scene_tree_tile_load(scene_t *s, ssize_t idx)
-{
-    char fname[BUFF_SZ];
-    size_t item_tile_side = ceilf(s->scene_size/ITEM_TILE_SIZE);
-    int j;
-    tree_tile_t *res;
-    
-    if(snprintf(fname, BUFF_SZ, "data/%s/tree/tile_%d.atd", s->name, idx) < BUFF_SZ)
-    {
-
-	struct stat sbuff;
-	if(!stat(fname, &sbuff))
-	{
-	    size_t item_count = sbuff.st_size / (sizeof(tree_t) - sizeof(tree_type_t *) + TREE_NAME_SZ);
-//	    printf("Load tile with %d items\n", item_count);
-	    
-	    size_t sz = sizeof(tree_tile_t) + sizeof(tree_t)*item_count;
-	    res = calloc(sz,1);
-	    res->count = item_count;
-	    
-	    FILE *f = fopen(fname, "r");
-	    if(f)
-	    {
-		for(j=0; j<item_count; j++)
-		{
-		    char bnam[TREE_NAME_SZ];
-		    
-		    size_t r1 = fread(bnam, TREE_NAME_SZ, 1, f);
-		    tree_t *tree = &res->tree[j];
-		    size_t r2 = fread(
-			((void *)tree) + offsetof(tree_t, pos), 
-			sizeof(tree_t) - sizeof(tree_type_t *),
-			1,
-			f);
-		    tree->type = tree_type_get(bnam);
-		    
-		    if((r1 != 1) || (r2 != 1))
-		    {
-			printf("Failed to load item\n");
-			exit(1);
-		    }
-		}
-		if(fclose(f)!=0)
-		{
-		    printf(
-			"Failed to close file after loading item tile %d of scene %s\n",
-			idx, s->name);
-		    exit(1);
-		}
-		return res;
-		
-		
-	    }
-	}
-    }    
-    printf("Failed to load item tile %d of scene %s\n", idx, s->name);
-    exit(1);
-}
-
-static ball_tile_t *scene_ball_tile_load(scene_t *s, ssize_t idx)
-{
-    return 0;
-}
-
-static int scene_find_missing_item_tile(scene_t *s)
-{
-    int my_x = s->camera.pos[0]/ITEM_TILE_SIZE;
-    int my_y = s->camera.pos[1]/ITEM_TILE_SIZE;
-    int x, y;
-    int steps = 2*RENDER_DISTANCE/ITEM_TILE_SIZE;
-    
-    int side = ceilf(s->scene_size/ITEM_TILE_SIZE);
-
-    for( x = my_x-steps; x <= my_x+steps; x++)
-    {
-	if( x < 0 || x >= side)
-	    continue;
-	
-	for( y = my_y-steps; y <= my_y+steps; y++)
-	{
-	    if( y < 0 || y >= side)
-	    continue;
-	
-	    int my_idx = x + y * side;
-	    if(!s->tree_tile[my_idx])
-		return my_idx;
-	}
-    }
-    return SCENE_NONE;
-}
-
 /*
   If a tile needs loading, load it, wait for the main thread to allow
   updates, and insert it, return true.
@@ -469,7 +378,7 @@ static int scene_try_load_tile(
 	}	
 	return 1;
     }
-    
+/*    
     int idx = scene_find_missing_item_tile(s);
     if(idx != SCENE_NONE)
     {
@@ -492,7 +401,7 @@ static int scene_try_load_tile(
 	}	
 	return 1;
     }
-    
+*/  
 //	printf("No tiles needed\n");
 
     if(scene_find_unneeded_tile(s, &sub))
@@ -634,8 +543,6 @@ static void scene_load_init(scene_t *s)
 	    {
 
 		size_t item_tile_side = ceilf(s->scene_size/ITEM_TILE_SIZE);
-		s->ball_tile = calloc(item_tile_side*item_tile_side, sizeof(ball_tile_t *));
-		s->tree_tile = calloc(item_tile_side*item_tile_side, sizeof(tree_tile_t *));
 
 		s->root_tile = scene_tile_load(s, &st);
 		assert(s->root_tile);
@@ -738,8 +645,7 @@ static size_t scene_allocate_tile(tile_t *t, int lvl)
 
 void scene_configure(
     scene_t *s,
-    int lb, float scene_size, 
-    int max_tree_count, int max_ball_count )
+    int lb, float scene_size)
 {
     s->level_base = lb * TILE_LEVELS;
     s->scene_size = scene_size;
@@ -760,22 +666,6 @@ void scene_configure(
 	"%d tiles of %.2f kB each allocated. Used a total of %.2f megabytes of memory\n", 
 	res/sizeof(tile_t), ((float)sizeof(tile_t))/1024,
 	((double)res)/1024/1024);
-
-    size_t item_tile_side = ceil(s->scene_size/ITEM_TILE_SIZE);
-    s->ball_tile = calloc(item_tile_side*item_tile_side, sizeof(ball_tile_t *));
-    s->tree_tile = calloc(item_tile_side*item_tile_side, sizeof(tree_tile_t *));
-    int i;
-    for(i=0; i<item_tile_side*item_tile_side; i++)
-    {
-	s->ball_tile[i] = calloc(sizeof(ball_tile_t) + max_ball_count*sizeof(ball_t), 1);
-	
-	s->tree_tile[i] = calloc(sizeof(tree_tile_t) + max_tree_count*sizeof(tree_t), 1);
-    }
-    printf(
-	"Allocated %.2f MB item tile data in %d tiles\n", 
-	((float)item_tile_side)*item_tile_side*
-	(max_ball_count*sizeof(ball_t) + max_tree_count*sizeof(tree_t)) / 1024 / 1024,
-	item_tile_side*item_tile_side);
 
 }
 
@@ -1015,87 +905,58 @@ int scene_is_visible(scene_t *s, float *pos, float radius)
     return 1;
 }
 
-
-void scene_save_items(scene_t *s)
+void scene_tree_destroy(
+    scene_t *s, 
+    int tid)
 {
-    char fname[BUFF_SZ];
-    size_t item_tile_side = ceilf(s->scene_size/ITEM_TILE_SIZE);
-    int i, j;
-
-    for(i=0; i<item_tile_side*item_tile_side; i++)
-    {
-	if(snprintf(fname, BUFF_SZ, "data/%s/tree/tile_%d.atd", s->name, i) < BUFF_SZ)
-	{
-	    assert(s->tree_tile[i]);
-
-	    FILE *f = fopen(fname, "w");
-	    if(f)
-	    {
-		for(j=0; j<s->tree_tile[i]->count; j++)
-		{
-		    
-		    size_t w1 = fwrite(s->tree_tile[i]->tree[j].type->name, TREE_NAME_SZ, 1, f);
-		    tree_t *tree = &s->tree_tile[i]->tree[j];
-/*		    
-		    printf("Saving item %d of %d...\n", j, s->tree_tile[i]->count);
-		    printf("Name is %s\n", s->tree_tile[i]->tree[j].type->name);
-		    printf("Address is %d\n", tree);
-*/
-		    size_t w2 = fwrite(
-			((void *)tree) + offsetof(tree_t, pos), 
-			sizeof(tree_t) - sizeof(tree_type_t *),
-			1,
-			f);
-		    
-
-		    if((w1 != 1) || (w2 != 1))
-		    {
-			printf("Failed to save item %d in item tile %d of scene %s\n", j, i, s->name);
-			exit(1);
-		    }
-		}
-		if(fclose(f)!=0)
-		{
-		    printf("Failed to close file after saving item tile %d of scene %s\n", i, s->name);
-		    exit(1);
-		}
-		continue;
-		
-	    }
-	}
-	printf("Failed to save item tile %d of scene %s\n", i, s->name);
-	exit(1);
-    }    
+    s->tree_used[tid/32] &= ~(1<<(tid%32));
+    s->tree_search_start = mini(tid, s->tree_search_start);
+    s->tree_count--;
 }
 
+size_t scene_tree_get_count(scene_t *s)
+{
+    return s->tree_count;
+}
+
+static inline int scene_tree_free(scene_t *s, size_t tid)
+{
+    return !(s->tree_used[tid/32] & (1<<(tid%32)));
+}
+
+tree_t *scene_tree_get(scene_t *s, size_t idx)
+{
+    return scene_tree_free(s, idx)?0:&s->tree[idx];
+}
+
+void scene_tree_type_get(scene_t *s, char *n, tree_type_t ** pos)
+{
+    *pos = tree_type_get(n);
+}
 
 int scene_tree_create(
     scene_t *s,
     char *tree_type_name,
-    float *pos,
-    float angle,
     float scale)
 {
-    int x_idx = pos[0] / ITEM_TILE_SIZE;
-    int y_idx = pos[1] / ITEM_TILE_SIZE;
+    int idx = s->tree_search_start;
+    while(!scene_tree_free(s, idx))
+	idx++;
     
-    int idx = x_idx + y_idx * ceilf(s->scene_size/ITEM_TILE_SIZE);
-    
-    tree_t *t = &(s->tree_tile[idx]->tree[s->tree_tile[idx]->count++]);
-    
-    t->pos[0] = pos[0];
-    t->pos[1] = pos[1];
-    t->pos[2] = scene_get_height(s, pos[0], pos[1]);
-    //printf("Create tree at %f %f %f with angle %.2f\n", pos[0], pos[1], t->pos[2], angle);
-    t->type = tree_type_get(tree_type_name);
-    t->angle = angle;
-    t->radius = 3.0;
-    t->scale = 1.0;
+    tree_t *t = &s->tree[idx];
+/*    
+    printf("Create tree %d named %s\n",
+	   t, tree_type_name);
+*/  
+    scene_tree_type_get(s, tree_type_name, &(t->type));
+        
+    t->scale = scale;
+    s->tree_count++;
+    s->tree_search_start = idx+1;
+    s->tree_used[idx/32] |= (1<<(idx%32));
     
     return idx;
 }
-
-
 
 void scene_ball_destroy(
     scene_t *s, 
@@ -1153,10 +1014,10 @@ int scene_ball_create(
 	idx++;
     
     ball_t *t = &s->ball[idx];
-/*    
+/*
     printf("Create ball %d named %s\n",
 	   t, ball_type_name);
-*/  
+*/
     scene_ball_type_get(s, ball_type_name, &(t->type));
     assert(!t->type);
     
@@ -1165,7 +1026,7 @@ int scene_ball_create(
     s->ball_count++;
     s->ball_search_start = idx+1;
     s->ball_used[idx/32] |= (1<<(idx%32));
-    
+    assert(scene_ball_get(s, idx));
     return idx;
 }
 

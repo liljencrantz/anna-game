@@ -22,12 +22,16 @@ function Tree.create(world,name,scale, pos)
       scale)
 
 
-   self.transform = transform.Transform.create(self.world.scene)
-   self.transform:translate(
+   self.baseTransform = transform.Transform.create(self.world.scene)
+   self.fullTransform = transform.Transform.create(self.world.scene)
+   self.shearTransform = transform.Transform.create(self.world.scene)
+   self.ballTransform = transform.Transform.create(self.world.scene)
+   self.baseTransform:translate(
       unpack(pos)
    )
-   self.transform:transform(self.stem)
-   self.transform:transform(self.ball)
+   self.ballTransform:translate(
+      0,0,3
+   )
 
 --   TreeStem.create(
 --      self.world.scene, "tree1"
@@ -38,6 +42,13 @@ function Tree.create(world,name,scale, pos)
 end
 
 function Tree:step(dt)
+   self.shearTransform.arr[9] = 0.05*math.sin(2*self.world.scene.time)
+   self.fullTransform:set(self.baseTransform)
+   self.fullTransform:multiply(self.shearTransform)
+   self.fullTransform:transform(self.stem)
 
+   self.fullTransform:multiply(self.ballTransform)
+   self.fullTransform:transform(self.ball)
+   
 end
    

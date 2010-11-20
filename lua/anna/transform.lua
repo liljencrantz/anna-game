@@ -120,6 +120,9 @@ function Transform:rotateZ(a)
 end
 
 function Transform:set(v)
+   if v.arr then
+      v = v.arr
+   end
    self.arr = util.copy(v)
 end
 

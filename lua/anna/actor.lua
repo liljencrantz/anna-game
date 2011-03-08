@@ -48,6 +48,7 @@ function Actor.create(world,name)
    self.experience = {}
    self.vel={0,0,0}
    self.pos={0,0,0}
+   self.transform = transform.Transform.create(self.world.scene)
 
    table.insert(world.steppable, self)
    
@@ -254,14 +255,14 @@ function Actor:animate()
       local x = off[1]*f1 - off[2]*f2
       local y = off[1]*f2 + off[2]*f1
       
-      local t = transform.Transform.create(self.world.scene)
-      t:translate(self.pos[1]+x, self.pos[2]+y, self.pos[3]+off[3])
+      self.transform:identity()
+      self.transform:translate(self.pos[1]+x, self.pos[2]+y, self.pos[3]+off[3])
 --      print(t)
-      t:rotateZ(-(self.angle+a[1]))
-      t:rotateY(-a[2])
-      t:rotateX(-a[3])
-      t:translate(unpack(partData.roffset))
-      t:transform(partData.ball)
+      self.transform:rotateZ(-(self.angle+a[1]))
+      self.transform:rotateY(-a[2])
+      self.transform:rotateX(-a[3])
+      self.transform:translate(unpack(partData.roffset))
+      self.transform:transform(partData.ball)
 --[[
       self.body[partName].ball:setLocation(
 	 self.world.scene, 

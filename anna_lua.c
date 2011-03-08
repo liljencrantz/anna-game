@@ -70,6 +70,12 @@ static int get_double (lua_State *L, void *v, off_t off)
     return 1;
 }
 
+static int get_string_array(lua_State *L, void *v, off_t off)
+{
+    lua_pushstring(L, (char *)(v+off));
+    return 1;
+}
+
 static int set_double (lua_State *L, void *v, off_t off)
 {
     *(double*)(v+off) = luaL_checknumber(L, 3);
@@ -610,6 +616,7 @@ void register_types(
     
     
     static const register_member_t scene_getters[] = {
+	{"name",          get_string_array, offsetof(scene_t,name)   },
 	{"size",          get_float, offsetof(scene_t,scene_size)   },
 	{"time",          get_double, offsetof(scene_t,time)   },
 	{"cameraX",       get_float, offsetof(scene_t,camera)+offsetof(view_t,pos)},

@@ -42,7 +42,7 @@ function Tree.create(world,name,scale, pos)
 end
 
 function Tree:step(dt)
-   self.shearTransform.arr[9] = 0.05*math.sin(2*self.world.scene.time)
+   self.shearTransform.arr[9] = 0.1*math.sin(2*self.world.scene.time)
    self.fullTransform:set(self.baseTransform)
    self.fullTransform:multiply(self.shearTransform)
    self.fullTransform:transform(self.stem)

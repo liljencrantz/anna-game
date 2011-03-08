@@ -44,8 +44,6 @@ end
 function createWorld()
    local w = world.World.create("anna", false)
    w.scene:configure(2, 800, 500, 500)
-
-
    w.scene:setTerrainElement(
       10,1, 1, 
       1,
@@ -68,9 +66,6 @@ function createWorld()
 	 
       end
    end
-
-
-   
    print("Terrain created")
    
    w.scene:generateLod()
@@ -78,6 +73,7 @@ function createWorld()
    
    w.scene:saveTerrain()
    print("Terrain saved")
+
 
    local bt = BallType.create(6, "ball1",0.65)
    for i = 1, (2^7) do
@@ -162,7 +158,6 @@ function createWorld()
 
    print("Balls created and saved")
 
-
    print("Creating trees...")
    for i = 11, 790, 12 do
       for j = 11, 790, 12 do
@@ -171,14 +166,15 @@ function createWorld()
 	 
 	 local h = w.scene:getTerrainElement(10,x,y) or 1000
 	 if h < 10 and (i/40)%2 >= 1 then
-	    w.scene:createTree(
+	    w:createTree(
 	       "tree1", 
+	       {x,y,h},
 	       1 + 0.3*math.random())
 	 end
       end
    end
    print("Trees created!")
-   w.scene:saveItems()
+   w:saveItems()
    print("Trees saved")
 end
 

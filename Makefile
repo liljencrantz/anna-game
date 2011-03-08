@@ -26,7 +26,7 @@ include $(ANNA_OBJS:.o=.d)
 #             END DEPENDENCY TRACKING                   #
 #########################################################
 
-anna: $(ANNA_OBJS) luasrc/lua-5.1.4/src/liblua.a
+anna: $(ANNA_OBJS) luasrc/lua-5.1.4/src/liblua.a lua/lua-table-persistence
 	$(CC) $(ANNA_OBJS) $(LDFLAGS) -o $@ #-fprofile-arcs -ftest-coverage -pg
 
 tile_test: $(TILE_OBJS) 
@@ -46,3 +46,6 @@ luasrc/lua-5.1.4:
 
 luasrc/lua-5.1.4/src/liblua.a: luasrc/lua-5.1.4
 	cd luasrc/lua-5.1.4/src; $(MAKE) CFLAGS="-O2 -Wall -DLUA_USE_LINUX -DLUA_USER_H=\"\\\"$(shell pwd)/luauser.h\\\"\"" liblua.a
+
+lua/lua-table-persistence:
+	cd lua; git clone https://github.com/hipe/lua-table-persistence.git

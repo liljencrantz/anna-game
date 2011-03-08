@@ -1,6 +1,9 @@
 module("world", package.seeall)
 
+require("lua/anna/itemtile")
+
 CAMERA_DISTANCE = 5.0
+ITEM_TILE_SIZE = 100
 
 World = {}
 
@@ -16,8 +19,37 @@ function World.create(name, load)
    self.scene.cameraZ = 500
 
    self.steppable = {}
+   self.itemTile = {}
 
    return self
+end
+
+function World:getItemTile(x,y)
+   x_idx = math.floor(x/ITEM_TILE_SIZE)
+   y_idx = math.floor(y/ITEM_TILE_SIZE)
+   x_len = math.ceil(self.scene.size/ITEM_TILE_SIZE)
+
+   idx = x_idx + x_len*y_idx
+
+   if not self.itemTile[idx] then
+      self.itemTile[idx] = itemtile.ItemTile.create(idx)
+   end
+   return self.itemTile[idx]
+end
+
+
+function World:createTree(
+      treeName,
+      pos,
+      scale)
+   local it = self:getItemTile(pos[1], pos[2])
+   it:createTree(treeName, pos, scale)
+end
+
+function World:saveItems()
+   for key, tile in pairs(self.itemTile) do
+      tile:save(self.scene.name)
+   end
 end
 
 function World:step(dt)

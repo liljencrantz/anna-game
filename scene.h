@@ -9,7 +9,7 @@
 #include "tree.h"
 #include "ball.h"
 #include "boid.h"
-#include "hash_table.h"
+#include "anna/anna.h"
 
 #define SCENE_TREE_MAX 4096
 #define SCENE_BALL_MAX 8192
@@ -30,7 +30,7 @@
    objects but avoiding memory allocations in the main thread.
 */
 
-typedef struct
+struct scene
 {
     int version;
     int level_base;
@@ -73,8 +73,9 @@ typedef struct
     int boid_set_used[SCENE_BOID_SET_MAX/32];
     size_t boid_set_search_start;
     size_t boid_set_count;    
-}
-scene_t;
+};
+
+typedef struct scene scene_t;
 
 /**
    Return the terrain node with the specified nid

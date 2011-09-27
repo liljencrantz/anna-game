@@ -6,7 +6,6 @@
 #include <GL/glew.h>	
 #include <GL/glu.h>	
 
-#include "util.h"
 #include "common.h"
 #include "render.h"
 #include "screen.h"
@@ -40,7 +39,7 @@ void render_init()
     render_balls_init();    
 }
 
-static GLfloat sign(GLfloat v)
+static GLfloat signf(GLfloat v)
 {
     return v>0.0?1.0:-1.0;
 }
@@ -76,7 +75,7 @@ static void calc_pov( scene_t *s )
 	for( i=0; i<3; i++ )
 	{
 	    float divisor = (plane[i][0]-mpos[0]);
-	    divisor = fabs(divisor)<0.0000001?0.01*sign(divisor):divisor;
+	    divisor = fabs(divisor)<0.0000001?0.01*signf(divisor):divisor;
 	    s->camera.k[i] = (plane[i][1]-mpos[1])/divisor;
 	    s->camera.m[i] = mpos[1] -mpos[0]*s->camera.k[i];
 	    s->camera.side[i] = plane[i][0]>mpos[0];
@@ -129,7 +128,7 @@ static void render_setup_camera(scene_t *s)
    printf( "LALALA angle %.2f, pos %.2f %.2f\n", 
 		    s->camera.lr_rot,
 		    s->camera.pos[0], s->camera.pos[1]);
-/**/	    
+*/	    
 	}
 #endif	
 	calc_pov( s );

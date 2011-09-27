@@ -12,8 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "util.h"
-#include "hash_table.h"
+#include "anna/anna.h"
 #include "scene.h"
 #include "thread.h"
 

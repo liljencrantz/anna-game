@@ -55,19 +55,6 @@ static inline float maxf( float a,
 	return a>b?a:b;
 }
 
-static inline int mini( int a,
-	  int b )
-{
-	return a<b?a:b;
-}
-
-
-static inline int maxi( int a, 
-	  int b )
-{
-	return a>b?a:b;
-}
-
 static inline float dot_prod( float *a,
 		float *b,
 		int len)

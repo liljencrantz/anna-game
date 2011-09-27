@@ -1,0 +1,17 @@
+
+use(annaGame);
+
+def initWorld()
+{
+}
+
+def main()
+{
+    screen.init(640, 480, 0);
+/*
+    while(1)
+    {
+      now := ;
+    }
+*/  
+}

@@ -28,20 +28,10 @@ void init()
     else
 	screen_init(960, 600, 0);
 
-    GLenum err = glewInit();
-    if (GLEW_OK != err)
-    {
-	/* Problem: glewInit failed, something is seriously wrong. */
-	fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-	exit(1);
-    }
-    fprintf(stdout, "Using GLEW %s\n", glewGetString(GLEW_VERSION));
-
     render_init();    
-    anna_lua_init();
     set_current_thread_name("anna (main)");
 }
-
+/*
 int main(int argc, char **argv) 
 {  
     init();	
@@ -49,3 +39,4 @@ int main(int argc, char **argv)
     return 0;
 }
 
+*/

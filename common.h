@@ -2,7 +2,6 @@
 #define COMMON_H
 
 //#include "SDL/SDL_opengl.h"
-#include "util.h"
 #include "node.h"
 #include "heightmap_element.h"
 

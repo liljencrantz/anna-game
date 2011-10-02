@@ -7,7 +7,12 @@ def initWorld()
 
 def main()
 {
-    screen.init(640, 480, 0);
+    s := Scene();
+    print("1\n");
+    s.configure(2, 100.0);
+    print("Scene size: ", s.sceneSize, "\n");
+    print("dfafd\n");
+//    screen.init(640, 480, 0);
 /*
     while(1)
     {

@@ -10,5 +10,7 @@ tile_test
 tree_branch_data.c
 data
 core
-luasrc
-lua-table-persistence
+autogen/*.c
+autogen/*.h
+lua
+lib/*.so

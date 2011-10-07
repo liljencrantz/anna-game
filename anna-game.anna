@@ -7,11 +7,13 @@ def initWorld()
 
 def main()
 {
-    s := Scene();
+    s := scene.Scene();
     print("1\n");
     s.configure(2, 100.0);
     print("Scene size: ", s.sceneSize, "\n");
     print("dfafd\n");
+    print("AAA", primitives.ballTypeLoad("anna","ball1"), "\n");
+
 //    screen.init(640, 480, 0);
 /*
     while(1)
@@ -20,3 +22,4 @@ def main()
     }
 */  
 }
+

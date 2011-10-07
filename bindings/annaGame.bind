@@ -1,6 +1,9 @@
 
-include("\"screen.h\"", "\"scene.h\"");
-/*
+include(
+    "\"screen.h\"", "\"scene.h\"", "\"render.h\"", 
+    "\"GL/glew.h\"", "\"GL/glu.h\"", 
+);
+
 screen
 {
     def Void init(Int width, Int height, Int fullscreen) (name(screen_init));
@@ -9,20 +12,52 @@ screen
     def Void destroy() (name(screen_destroy));
     def Void swapBuffers() (name(screen_swap_buffers));
 }
-*/
- //scene
-//{
+
+scene
+{
+
     cStruct Scene (name(scene))
     {
-	var Float sceneSize (name(scene_size));
-	var Double time;
-	var Float renderQuality (name(render_quality));
+	const Float sceneSize (name(scene_size));
+	const Double time;
+	const Float renderQuality (name(render_quality));
+	
 	def Void configure(Int tileLevels, Float size) (name(scene_configure));
 
-	def Void init(String name, Int load) (name(scene_init));
+	def Void iiinit(String name, Int load) (name(scene_init));
 	def Void saveTerrain() (name(scene_save_terrain));
 	def Void render();
+	def Void update() (name(scene_update));
+	
+    }
+}
+
+primitives
+{
+    cStructPointer BallType (name(ball_type))
+    {
+ 
+	const Int levels;
+	const Int alpha;
+
+//	def Void calc() (name(ball_calc));
+//	def Void set(Int x, Int y, Float height, Float red, Float green, Float blue) (name(ball_type_set));
+
+	def Void save(String directory, String name) (name(ball_type_save));     
 
     }
 
-//}
+    def BallType ballTypeLoad(String directory, String name) (name(ball_type_load));
+//    def BallType ballTypeCreate(Int level, String name, Int alpha, XXX alloc) (name(ball_type_create));    
+
+    cStruct Ball (name(ball))
+    {
+	var Float scale;
+	const BallType ballType (name(type));
+	var Float radius;
+	var Int visible;
+    }
+  
+    
+}
+

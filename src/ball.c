@@ -24,7 +24,7 @@ ball_type_t *ball_type_create(size_t level, char *name, GLubyte alpha, allocfn_t
     size_t sz = sizeof(ball_type_t) + ball_point_count(level)* sizeof(ball_point_t);
     assert(strlen(name) < BALL_NAME_MAX);
 //    printf("Ball has %d points\n",  ball_point_count(level));
-    printf("Created new ball type, size is %.2f kB\n",  (float)sz/1024);
+    wprintf(L"Created new ball type, size is %.2f kB\n",  (float)sz/1024);
     ball_type_t *res = alloc.fn(alloc.data, sz);
     strcpy(res->name, name);
     res->levels = level;
@@ -61,7 +61,7 @@ ball_type_t *ball_type_load(char *dir, char *name)
 	    }
 	}
     }
-    printf("Failed to load ball type %s\n", name);
+    wprintf(L"Failed to load ball type %s\n", cbuff);
     exit(1);
 }
 
@@ -82,7 +82,7 @@ void ball_type_save(ball_type_t *b, char *dir, char *fn)
 	    }
 	}
     }
-    printf("Failed to save ball type %s\n", fn);
+    wprintf(L"Failed to save ball type %s\n", fn);
     exit(1);
     
 }

@@ -15,7 +15,7 @@ typedef struct
 }
     ball_point_t;
 
-typedef struct
+struct ball_type
 {
     size_t levels;
     float error[BALL_LEVEL_MAX];
@@ -23,18 +23,20 @@ typedef struct
     char name[BALL_NAME_SZ];
     GLubyte alpha;
     ball_point_t data[];
-}
-    ball_type_t;
+};
 
-typedef struct 
+typedef struct ball_type ball_type_t;
+
+struct ball
 {
     GLfloat transform[16];
     GLfloat scale;
     ball_type_t *type;
     GLfloat radius;
     int visible;    
-}
-    ball_t;
+};
+
+typedef struct ball ball_t;
 
 void ball_load_init();
 ball_type_t *ball_type_get(char *name);

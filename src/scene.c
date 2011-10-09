@@ -352,7 +352,7 @@ static int scene_try_load_tile(
     if(pq_item.key)
     {
 	char *name = (char *)pq_item.key;
-//	printf("Loading ball %s\n", name);
+//	wprintf(L"Loading ball %s\n", name);
 	ball_type_t *bt = ball_type_load(s->name, name);
 	scene_ball_type_prerender(s, bt);
 	ball_type_t **target = (ball_type_t **)pq_item.dst;
@@ -363,7 +363,7 @@ static int scene_try_load_tile(
     if(scene_find_missing_tile(s, &sub))
     {
 	tile_t *t = scene_tile_load(s, &sub);
-//	printf("Found tile to load %d\n", t);
+//	wprintf(L"Found tile to load %d\n", t);
 	if(do_lock)
 	{
 	    pthread_mutex_lock(&sl->mutex);
@@ -401,7 +401,6 @@ static int scene_try_load_tile(
 	return 1;
     }
 */  
-//	printf("No tiles needed\n");
 
     if(scene_find_unneeded_tile(s, &sub))
     {
@@ -550,10 +549,11 @@ static void scene_load_init(scene_t *s)
 		scene_load_t *sl = (scene_load_t *)s->load_state;
 		hash_init(&sl->used, &hash_ptr_func, &hash_ptr_cmp);
 		sl->current_lap = 0;
-			
+		
 		pthread_mutex_init(&sl->mutex, 0);
 		pthread_cond_init(&sl->convar, 0);
 				
+
 		while(scene_try_load_tile(s))
 		    ;
 		
@@ -564,14 +564,14 @@ static void scene_load_init(scene_t *s)
 		
 		if(rc)
 		{
-		    printf("ERROR; return code from pthread_create() is %d\n", rc);
+		    wprintf(L"ERROR; return code from pthread_create() is %d\n", rc);
 		    exit(1);
 		}
 		return;
 	    }
 	}
     }
-    printf("Failed to load scene %s\n", s->name);
+    wprintf(L"Failed to load scene %s\n", s->name);
     exit(1);
 }
 

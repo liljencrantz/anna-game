@@ -1,16 +1,26 @@
 
 include(
     "\"screen.h\"", "\"scene.h\"", "\"render.h\"", 
-    "\"GL/glew.h\"", "\"GL/glu.h\"", 
+    "\"GL/glew.h\"", "\"GL/glu.h\"", "\"SDL/SDL.h\""
 );
 
 screen
 {
+    key
+    {
+	const Int escape (name(SDLK_ESCAPE));
+    }
+
     def Void init(Int width, Int height, Int fullscreen) (name(screen_init));
     def Void checkInput() (name(screen_check_input));
     def Int keyGet(Int key) (name(screen_key_get));
     def Void destroy() (name(screen_destroy));
     def Void swapBuffers() (name(screen_swap_buffers));
+}
+
+render
+{
+    def Void init() (name(render_init));
 }
 
 scene
@@ -22,9 +32,9 @@ scene
 	const Double time;
 	const Float renderQuality (name(render_quality));
 	
+	def Void __init__(String name, Int load) (name(scene_init));
 	def Void configure(Int tileLevels, Float size) (name(scene_configure));
 
-	def Void iiinit(String name, Int load) (name(scene_init));
 	def Void saveTerrain() (name(scene_save_terrain));
 	def Void render();
 	def Void update() (name(scene_update));

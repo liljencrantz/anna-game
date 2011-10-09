@@ -23,15 +23,7 @@ void screen_init(int w, int h, int fullscreen)
 	printf("Unable to set video mode: %s\n", SDL_GetError());
 	exit(1);
     }
-/*
-    GLenum err = glewInit();
-    if (GLEW_OK != err)
-    {
-	fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-	exit(1);
-    }
-    fprintf(stdout, "Using GLEW %s\n", glewGetString(GLEW_VERSION));
-  */  
+
 //    render_init();
 }
 

@@ -1,25 +1,240 @@
+#! /usr/bin/env anna
 
 use(annaGame);
+use(annaGame.scene);
 
-def initWorld()
+type Vec3
 {
+    var MutableList«Float» vec;
+    
+    def __init__(Float x, Float y, Float z)
+    {
+	vec = [x,y,z];
+    }
+
+    def Float __get__(Int idx)
+    {
+	vec[idx];
+    }
+
+    def Float xGetter()
+    {
+	vec[0];
+    }
+    
+    def Float xSetter(Float val)
+    {
+	vec[0] = val;
+    }
+	    
+    var Float x (property(xGetter, xSetter));
+
+    def Float yGetter()
+    {
+	vec[1];
+    }
+    
+    def Float ySetter(Float val)
+    {
+	vec[1] = val;
+    }
+    
+    var Float y (property(yGetter, ySetter));
+    
+    def Float zGetter()
+    {
+	vec[2];
+    }
+    
+    def Float zSetter(Float val)
+    {
+	vec[2] = val;
+    }
+    
+    var Float z (property(zGetter, zSetter));
+    
+}
+
+type Transform
+{
+    var MutableList«Float» vec;
+
+    def __init__(List«Float» init = ?)
+    {
+	if(init)
+	{
+	    vec = init;
+	}
+	else
+	{
+	    identity();
+	}
+    }
+
+    def identity()
+    {
+	vec = [1.0,0.0,0.0,0.0,
+	       0.0,1.0,0.0,0.0,
+	       0.0,0.0,1.0,0.0,
+	       0.0,0.0,0.0,1.0];
+    }
+
+    def __mul__(Transform t)
+    {
+	var res = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+	(0..4).each(x)
+	{
+	    (0..4).each(y)
+	    {
+		(0..4).each(a)
+		{	
+		    res[y+4*(x)] = res[y+4*(x)] + vec[y+4*(a)]*t.vec[a+4*(x-1)];
+		}
+	    }
+	}
+    }
+    
+    
+}
+
+type Stepable
+{
+
+    def Object step(Float dt){};
+
+}
+
+type World
+{
+    
+    var Scene scene;
+    
+    var MutableList«Actor» actor;
+    var MutableList«Stepable» stepable;
+    var Actor _player;
+    var Float time;
+    
+    def __init__(Scene scene)
+    {
+	this.scene = scene;
+	actor = «Actor»[];
+	stepable = «Stepable»[];
+	time = 0.0;
+    }
+    
+    def playerGetter()
+    {
+	_player;
+    }
+    
+    def playerSetter(Actor player)
+    {
+	_player = player;
+    }
+    
+    var Actor player (property(playerGetter, playerSetter));
+
+    def add(Object o)
+    {
+	expandCode(
+	    if(o as %Type)
+	    {
+		%list.push(o as %Type);
+	    }
+	    ,
+	    Type: [Actor, Stepable],
+	    list: [actor, stepable]);
+    }
+    
+    def step(Float dt)
+    {
+	time += dt;
+	stepable.each(it)
+	{
+	    it.step(dt);
+	}
+	
+	
+    }
+
+}
+
+type ActorData
+{
+    var Float turnSpeed;
+    var Float walkSpeed;
+
+    def __init__(Float turnSpeed, Float walkSpeed)
+    {
+	expandCode(
+	    this.%name = %name,
+	    name: [turnSpeed, walkSpeed]);
+    }
+}
+
+type Actor
+{
+    var World world;
+
+    var Vec3 pos;
+    var Vec3 vel;
+    var Transform transform;
+    var Float angle;
+    
+    var String name;
+    
+    var ActorData data;
+    
+
+    def __init__(World world, ActorData data, String name, Vec3 pos = ?, Vec3 vel = ?, Transform transform=?)
+    {
+	this.world = world;
+	expandCode(
+	    this.%name = %name or %init,
+	    name:[pos, vel, transform, name, data],
+	    init: [Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), Transform(), "", ?]
+	    );
+	world.add(this);
+    }
+
+    def Object step(Float dt){
+	print("WEEE %\n" % [dt]);
+    };
+
+}
+
+type UserActor (extends(Actor))
+{
+    
 }
 
 def main()
 {
-    s := scene.Scene();
-    print("1\n");
-    s.configure(2, 100.0);
-    print("Scene size: ", s.sceneSize, "\n");
-    print("dfafd\n");
-    print("AAA", primitives.ballTypeLoad("anna","ball1"), "\n");
+    screen.init(640, 480, 0);
+    render.init();
+    w := World(scene.Scene("anna", 1));
+    
+    w.player = Actor(w, ActorData(250.0, 8.0), "Bengt");
 
-//    screen.init(640, 480, 0);
-/*
+//    s.configure(2, 100.0);
+    //print("Scene size: ", s.sceneSize, "\n");
+    //  print("dfafd\n");
+//    print("AAA", primitives.ballTypeLoad("anna","ball1"), "\n");
+
     while(1)
     {
-      now := ;
+	use(screen);
+	screen.checkInput();
+	if(screen.keyGet(key.escape) != 0)
+	{
+	    break;
+	}
+
+	w.step(0.1);
+
+	w.scene.render();
+	screen.swapBuffers();
     }
-*/  
+
 }
 

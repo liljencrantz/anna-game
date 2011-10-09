@@ -13,6 +13,15 @@
 
 void render_init()
 {
+    GLenum err = glewInit();
+    if (GLEW_OK != err)
+    {
+	fwprintf(stderr, L"Error: %s\n", glewGetErrorString(err));
+	exit(1);
+    }
+    fwprintf(stdout, L"Using GLEW %s\n", glewGetString(GLEW_VERSION));
+
+
     thread_set_render();    
     glClearDepth(1.0);				// Enables Clearing Of The Depth Buffer
     glDepthFunc(GL_LEQUAL);				// The Type Of Depth Test To Do
@@ -148,7 +157,7 @@ void render( scene_t *s )
     render_terrain_start(s);
 
     render_trees_trunk(s);
-    render_boids(s);
+//    render_boids(s);
     render_terrain_finish(s);
     render_balls(s);
     

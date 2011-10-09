@@ -20,7 +20,6 @@ void vd_init(
 
     glGenBuffers(1, &(vd->vbo));
     glGenBuffers(1, &(vd->ibo));
-
 //    printf("Create new vbo / ibo %d / %d\n", vd->vbo, vd->ibo);
 
 }

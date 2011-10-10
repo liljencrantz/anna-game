@@ -1,0 +1,93 @@
+
+type Vec3
+{
+    var MutableList«Float» vec;
+    
+    def __init__(Float x, Float y, Float z)
+    {
+	vec = [x,y,z];
+    }
+
+    def Float __get__(Int idx)
+    {
+	vec[idx];
+    }
+
+    def Float xGetter()
+    {
+	vec[0];
+    }
+    
+    def Float xSetter(Float val)
+    {
+	vec[0] = val;
+    }
+	    
+    var Float x (property(xGetter, xSetter));
+
+    def Float yGetter()
+    {
+	vec[1];
+    }
+    
+    def Float ySetter(Float val)
+    {
+	vec[1] = val;
+    }
+    
+    var Float y (property(yGetter, ySetter));
+    
+    def Float zGetter()
+    {
+	vec[2];
+    }
+    
+    def Float zSetter(Float val)
+    {
+	vec[2] = val;
+    }
+    
+    var Float z (property(zGetter, zSetter));
+    
+}
+
+type Transform
+{
+    var MutableList«Float» vec;
+
+    def __init__(List«Float» init = ?)
+    {
+	if(init)
+	{
+	    vec = init;
+	}
+	else
+	{
+	    identity();
+	}
+    }
+
+    def identity()
+    {
+	vec = [1.0,0.0,0.0,0.0,
+	       0.0,1.0,0.0,0.0,
+	       0.0,0.0,1.0,0.0,
+	       0.0,0.0,0.0,1.0];
+    }
+
+    def __mul__(Transform t)
+    {
+	var res = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+	(0..4).each(x)
+	{
+	    (0..4).each(y)
+	    {
+		(0..4).each(a)
+		{	
+		    res[y+4*(x)] = res[y+4*(x)] + vec[y+4*(a)]*t.vec[a+4*(x-1)];
+		}
+	    }
+	}
+    }    
+    
+}

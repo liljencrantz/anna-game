@@ -1,4 +1,5 @@
 
+
 include(
     "\"screen.h\"", "\"scene.h\"", "\"render.h\"", 
     "\"GL/glew.h\"", "\"GL/glu.h\"", "\"SDL/SDL.h\""
@@ -9,6 +10,10 @@ screen
     key
     {
 	const Int escape (name(SDLK_ESCAPE));
+	const Int left (name(SDLK_LEFT));
+	const Int right (name(SDLK_RIGHT));
+	const Int up (name(SDLK_UP));
+	const Int down (name(SDLK_DOWN));
     }
 
     def Void init(Int width, Int height, Int fullscreen) (name(screen_init));
@@ -28,17 +33,26 @@ scene
 
     cStruct Scene (name(scene))
     {
+
 	const Float sceneSize (name(scene_size));
 	const Double time;
 	const Float renderQuality (name(render_quality));
-	
+
+	var Float cameraX (name("camera.pos[0]"));
+	var Float cameraY (name("camera.pos[1]"));
+	var Float cameraZ (name("camera.pos[2]"));
+
+	var Float cameraAngle (name("camera.lr_rot"));
+
 	def Void __init__(String name, Int load) (name(scene_init));
 	def Void configure(Int tileLevels, Float size) (name(scene_configure));
 
 	def Void saveTerrain() (name(scene_save_terrain));
 	def Void render();
 	def Void update() (name(scene_update));
-	
+
+	def Float getHeight(Float x, Float y) (name(scene_get_height));
+	def Void getSlope(Float x, Float y, MutableList«Float» slope (capacity(2))) (name(scene_get_slope));
     }
 }
 
@@ -70,4 +84,3 @@ primitives
   
     
 }
-

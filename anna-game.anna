@@ -2,106 +2,19 @@
 
 use(annaGame);
 use(annaGame.scene);
+use(linalg);
 
-type Vec3
+def Float time()
 {
-    var MutableList«Float» vec;
-    
-    def __init__(Float x, Float y, Float z)
-    {
-	vec = [x,y,z];
-    }
-
-    def Float __get__(Int idx)
-    {
-	vec[idx];
-    }
-
-    def Float xGetter()
-    {
-	vec[0];
-    }
-    
-    def Float xSetter(Float val)
-    {
-	vec[0] = val;
-    }
-	    
-    var Float x (property(xGetter, xSetter));
-
-    def Float yGetter()
-    {
-	vec[1];
-    }
-    
-    def Float ySetter(Float val)
-    {
-	vec[1] = val;
-    }
-    
-    var Float y (property(yGetter, ySetter));
-    
-    def Float zGetter()
-    {
-	vec[2];
-    }
-    
-    def Float zSetter(Float val)
-    {
-	vec[2] = val;
-    }
-    
-    var Float z (property(zGetter, zSetter));
-    
-}
-
-type Transform
-{
-    var MutableList«Float» vec;
-
-    def __init__(List«Float» init = ?)
-    {
-	if(init)
-	{
-	    vec = init;
-	}
-	else
-	{
-	    identity();
-	}
-    }
-
-    def identity()
-    {
-	vec = [1.0,0.0,0.0,0.0,
-	       0.0,1.0,0.0,0.0,
-	       0.0,0.0,1.0,0.0,
-	       0.0,0.0,0.0,1.0];
-    }
-
-    def __mul__(Transform t)
-    {
-	var res = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-	(0..4).each(x)
-	{
-	    (0..4).each(y)
-	    {
-		(0..4).each(a)
-		{	
-		    res[y+4*(x)] = res[y+4*(x)] + vec[y+4*(a)]*t.vec[a+4*(x-1)];
-		}
-	    }
-	}
-    }
-    
-    
+  tv := unix.time.Timeval();
+  tz := unix.time.Timezone();
+    unix.time.gettimeofday(tv, tz);
+    return tv.sec + 0.000001* tv.usec; 
 }
 
 type Stepable
 {
-
     def Object step(Float dt){};
-
 }
 
 type World
@@ -157,6 +70,20 @@ type World
 	
     }
 
+    def cameraSetter(List«Float» val)
+    {
+	scene.cameraX = val[0];
+	scene.cameraY = val[1];
+	scene.cameraZ = val[2];
+    }
+
+    def cameraGetter()
+    {
+	[scene.cameraX, scene.cameraY, scene.cameraZ]
+    }
+
+    var List«Float» camera (property(cameraGetter, cameraSetter));
+
 }
 
 type ActorData
@@ -175,7 +102,7 @@ type ActorData
 type Actor
 {
     var World world;
-
+    
     var Vec3 pos;
     var Vec3 vel;
     var Transform transform;
@@ -185,7 +112,7 @@ type Actor
     
     var ActorData data;
     
-
+    
     def __init__(World world, ActorData data, String name, Vec3 pos = ?, Vec3 vel = ?, Transform transform=?)
     {
 	this.world = world;
@@ -198,13 +125,14 @@ type Actor
     }
 
     def Object step(Float dt){
-	print("WEEE %\n" % [dt]);
+	
     };
 
 }
 
-type UserActor (extends(Actor))
+def handleInput(World w)
 {
+    p := w.player;
     
 }
 
@@ -215,14 +143,26 @@ def main()
     w := World(scene.Scene("anna", 1));
     
     w.player = Actor(w, ActorData(250.0, 8.0), "Bengt");
-
-//    s.configure(2, 100.0);
-    //print("Scene size: ", s.sceneSize, "\n");
-    //  print("dfafd\n");
+    
 //    print("AAA", primitives.ballTypeLoad("anna","ball1"), "\n");
+    w.scene.cameraZ = 3.0;
+    w.scene.cameraX  = 40.0;
+    w.scene.cameraY  = 40.0;
 
+    prev := time();
+    framerate := 30.0;
+    i := 1;
     while(1)
     {
+        tm := time();
+        dt := tm -prev;
+	framerate = 0.95 * framerate + 0.05/dt;
+	
+	if(i ^mod 300 == 0)
+	{
+	    print("Framerate is % fps\n" % [framerate]);
+	}
+	    
 	use(screen);
 	screen.checkInput();
 	if(screen.keyGet(key.escape) != 0)
@@ -230,10 +170,14 @@ def main()
 	    break;
 	}
 
-	w.step(0.1);
-
+	w.step(dt);
+	w.scene.cameraX += dt;
+	w.scene.cameraZ = w.scene.getHeight(w.scene.cameraX, w.scene.cameraY)+3.0;
+	w.scene.cameraAngle += 0.05;
 	w.scene.render();
 	screen.swapBuffers();
+	prev = tm;
+	i++;
     }
 
 }

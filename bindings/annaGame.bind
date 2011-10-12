@@ -18,7 +18,7 @@ screen
 
     def Void init(Int width, Int height, Int fullscreen) (name(screen_init));
     def Void checkInput() (name(screen_check_input));
-    def Int keyGet(Int key) (name(screen_key_get));
+    def Bool keyGet(Int key) (name(screen_key_get));
     def Void destroy() (name(screen_destroy));
     def Void swapBuffers() (name(screen_swap_buffers));
 }

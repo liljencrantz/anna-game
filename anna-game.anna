@@ -99,6 +99,14 @@ type ActorData
     }
 }
 
+enum Action
+{
+    walkForward,
+    walkBackward,
+    turnLeft,
+    turnRight,
+}
+
 type Actor
 {
     var World world;
@@ -111,20 +119,64 @@ type Actor
     var String name;
     
     var ActorData data;
+    var Buffer action;
     
-    
-    def __init__(World world, ActorData data, String name, Vec3 pos = ?, Vec3 vel = ?, Transform transform=?)
+    def __init__(
+	World world, ActorData data, String name, 
+	Vec3 pos = ?, Vec3 vel = ?, Float angle=?, 
+	Transform transform=?)
     {
 	this.world = world;
 	expandCode(
 	    this.%name = %name or %init,
-	    name:[pos, vel, transform, name, data],
-	    init: [Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), Transform(), "", ?]
+	    name:[pos, vel, transform, name, data, angle],
+	    init: [Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), Transform(), "", ?, 0.0]
 	    );
 	world.add(this);
+	action = Buffer();
+	angle = 0.0;
     }
 
+    def Float turnSpeed() (property)
+    {
+	data.turnSpeed;
+    }
+    
+    def Float walkSpeed() (property)
+    {
+	data.walkSpeed;
+    }
+
+    def __set__(Action action, Object val)
+    {
+	this.action[action.__value] = if(val){1}else{0};
+    }
+    
+    def __get__(Action action)
+    {
+	if(this.action[action.__value]==1){1}else{?};
+    }
+    
     def Object step(Float dt){
+	if(this[Action::turnLeft])
+	{
+	    angle += dt*turnSpeed;
+	    if(angle >= 360)
+	    {
+		angle -= 360;
+	    }
+	}
+	
+	if(this[Action::turnRight])
+	{
+	    angle -= dt*turnSpeed;
+	    if(angle < 0)
+	    {
+		angle += 360;
+	    }
+	}	
+
+	print(angle, "\n");
 	
     };
 
@@ -132,8 +184,12 @@ type Actor
 
 def handleInput(World w)
 {
+    use(annaGame.screen);
     p := w.player;
-    
+    expandCode(
+	p[Action::%action] = keyGet(key.%key),
+	action: [walkForward, walkBackward, turnLeft, turnRight],
+	key: [up, down, left, right]);
 }
 
 def main()
@@ -170,6 +226,8 @@ def main()
 	    break;
 	}
 
+	handleInput(w);
+
 	w.step(dt);
 	w.scene.cameraX += dt;
 	w.scene.cameraZ = w.scene.getHeight(w.scene.cameraX, w.scene.cameraY)+3.0;
@@ -179,6 +237,6 @@ def main()
 	prev = tm;
 	i++;
     }
-
+    
 }
 

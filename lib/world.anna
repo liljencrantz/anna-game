@@ -1,0 +1,76 @@
+use(annaGame.scene);
+use(actor);
+
+class Stepable
+{
+    def Object step(Float dt){};
+}
+
+class World
+{
+    
+//    var annaGame.scene.Scene scene;
+    var Scene scene;
+    
+    var MutableList«Actor» actor;
+    var MutableList«Stepable» stepable;
+    var Actor _player;
+    var Float time;
+    
+    def __init__(Scene scene)
+    {
+	this.scene = scene;
+	actor = «Actor»[];
+	stepable = «Stepable»[];
+	time = 0.0;
+    }
+    
+    def playerGetter()
+    {
+	_player;
+    }
+    
+    def playerSetter(Actor player)
+    {
+	_player = player;
+    }
+    
+    var Actor player (property(playerGetter, playerSetter));
+
+    def add(Object o)
+    {
+	expandCode(
+	    if(o as %Type)
+	    {
+		%list.push(o as %Type);
+	    }
+	    ,
+	    Type: [Actor, Stepable],
+	    list: [actor, stepable]);
+    }
+    
+    def step(Float dt)
+    {
+	time += dt;
+	stepable.each(it)
+	{
+	    it.step(dt);
+	}
+    }
+
+    def cameraSetter(List«Float» val)
+    {
+	scene.cameraX = val[0];
+	scene.cameraY = val[1];
+	scene.cameraZ = val[2];
+    }
+
+    def cameraGetter()
+    {
+	[scene.cameraX, scene.cameraY, scene.cameraZ]
+    }
+
+    var List«Float» camera (property(cameraGetter, cameraSetter));
+
+}
+

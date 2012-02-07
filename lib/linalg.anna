@@ -1,5 +1,5 @@
 
-type Vec3
+class Vec3
 {
     var MutableList«Float» vec;
     
@@ -11,6 +11,11 @@ type Vec3
     def Float __get__(Int idx)
     {
 	vec[idx];
+    }
+
+    def Float __set__(Int idx, Float val)
+    {
+	vec[idx] = val;
     }
 
     def Float xGetter()
@@ -48,10 +53,15 @@ type Vec3
     }
     
     var Float z (property(zGetter, zSetter));
+
+    def toString()
+    {
+	String::convert(vec);
+    }   
     
 }
 
-type Transform
+class Transform
 {
     var MutableList«Float» vec;
 
@@ -59,7 +69,7 @@ type Transform
     {
 	if(init)
 	{
-	    vec = init;
+	    vec = init.thaw;
 	}
 	else
 	{

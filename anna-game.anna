@@ -3,183 +3,15 @@
 use(annaGame);
 use(annaGame.scene);
 use(linalg);
+use(actor);
+use(world);
 
 def Float time()
 {
-  tv := unix.time.Timeval();
-  tz := unix.time.Timezone();
+    tv := unix.time.TimeVal();
+    tz := unix.time.TimeZone();
     unix.time.gettimeofday(tv, tz);
     return tv.sec + 0.000001* tv.usec; 
-}
-
-type Stepable
-{
-    def Object step(Float dt){};
-}
-
-type World
-{
-    
-    var Scene scene;
-    
-    var MutableList«Actor» actor;
-    var MutableList«Stepable» stepable;
-    var Actor _player;
-    var Float time;
-    
-    def __init__(Scene scene)
-    {
-	this.scene = scene;
-	actor = «Actor»[];
-	stepable = «Stepable»[];
-	time = 0.0;
-    }
-    
-    def playerGetter()
-    {
-	_player;
-    }
-    
-    def playerSetter(Actor player)
-    {
-	_player = player;
-    }
-    
-    var Actor player (property(playerGetter, playerSetter));
-
-    def add(Object o)
-    {
-	expandCode(
-	    if(o as %Type)
-	    {
-		%list.push(o as %Type);
-	    }
-	    ,
-	    Type: [Actor, Stepable],
-	    list: [actor, stepable]);
-    }
-    
-    def step(Float dt)
-    {
-	time += dt;
-	stepable.each(it)
-	{
-	    it.step(dt);
-	}
-	
-	
-    }
-
-    def cameraSetter(List«Float» val)
-    {
-	scene.cameraX = val[0];
-	scene.cameraY = val[1];
-	scene.cameraZ = val[2];
-    }
-
-    def cameraGetter()
-    {
-	[scene.cameraX, scene.cameraY, scene.cameraZ]
-    }
-
-    var List«Float» camera (property(cameraGetter, cameraSetter));
-
-}
-
-type ActorData
-{
-    var Float turnSpeed;
-    var Float walkSpeed;
-
-    def __init__(Float turnSpeed, Float walkSpeed)
-    {
-	expandCode(
-	    this.%name = %name,
-	    name: [turnSpeed, walkSpeed]);
-    }
-}
-
-enum Action
-{
-    walkForward,
-    walkBackward,
-    turnLeft,
-    turnRight,
-}
-
-type Actor
-{
-    var World world;
-    
-    var Vec3 pos;
-    var Vec3 vel;
-    var Transform transform;
-    var Float angle;
-    
-    var String name;
-    
-    var ActorData data;
-    var Buffer action;
-    
-    def __init__(
-	World world, ActorData data, String name, 
-	Vec3 pos = ?, Vec3 vel = ?, Float angle=?, 
-	Transform transform=?)
-    {
-	this.world = world;
-	expandCode(
-	    this.%name = %name or %init,
-	    name:[pos, vel, transform, name, data, angle],
-	    init: [Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), Transform(), "", ?, 0.0]
-	    );
-	world.add(this);
-	action = Buffer();
-	angle = 0.0;
-    }
-
-    def Float turnSpeed() (property)
-    {
-	data.turnSpeed;
-    }
-    
-    def Float walkSpeed() (property)
-    {
-	data.walkSpeed;
-    }
-
-    def __set__(Action action, Object val)
-    {
-	this.action[action.__value] = if(val){1}else{0};
-    }
-    
-    def __get__(Action action)
-    {
-	if(this.action[action.__value]==1){1}else{?};
-    }
-    
-    def Object step(Float dt){
-	if(this[Action::turnLeft])
-	{
-	    angle += dt*turnSpeed;
-	    if(angle >= 360)
-	    {
-		angle -= 360;
-	    }
-	}
-	
-	if(this[Action::turnRight])
-	{
-	    angle -= dt*turnSpeed;
-	    if(angle < 0)
-	    {
-		angle += 360;
-	    }
-	}	
-
-	print(angle, "\n");
-	
-    };
-
 }
 
 def handleInput(World w)
@@ -198,7 +30,7 @@ def main()
     render.init();
     w := World(scene.Scene("anna", 1));
     
-    w.player = Actor(w, ActorData(250.0, 8.0), "Bengt");
+    w.player = Actor(w, ActorData(turnSpeed: 250.0, walkSpeed: 8.0, reactionSpeed: 10.0), "Bengt");
     
 //    print("AAA", primitives.ballTypeLoad("anna","ball1"), "\n");
     w.scene.cameraZ = 3.0;

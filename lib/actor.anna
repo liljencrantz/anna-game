@@ -1,0 +1,138 @@
+use(world);
+use(linalg);
+
+class ActorData
+{
+    var Float turnSpeed;
+    var Float walkSpeed;
+    var Float reactionSpeed;
+
+    def __init__(Float turnSpeed, Float walkSpeed, Float reactionSpeed)
+    {
+	expandCode(
+	    this.%name = %name,
+	    name: [turnSpeed, walkSpeed, reactionSpeed]);
+    }
+}
+
+enum Action
+{
+    walkForward,
+    walkBackward,
+    turnLeft,
+    turnRight,
+}
+
+class Actor
+{
+    var World world;
+    
+    var Vec3 pos;
+    var Vec3 vel;
+    var Transform transform;
+    var Float angle;
+    
+    var String name;
+    
+    var ActorData data;
+    var Buffer action;
+    
+    def __init__(
+	World world, ActorData data, String name, 
+	Vec3 pos = ?, Vec3 vel = ?, Float angle=?, 
+	Transform transform=?)
+    {
+	this.world = world;
+	expandCode(
+	    this.%name = %name or %init,
+	    name:[pos, vel, transform, name, data, angle],
+	    init: [Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), Transform(), "", ?, 0.0]
+	    );
+	world.add(this);
+	action = Buffer();
+    }
+    
+    def Float turnSpeed() (property)
+    {
+	data.turnSpeed;
+    }
+    
+    def Float walkSpeed() (property)
+    {
+	data.walkSpeed;
+    }
+
+    def Float reactionSpeed() (property)
+    {
+	data.reactionSpeed;
+    }
+
+    def __set__(Action action, Object val)
+    {
+	this.action[action.__value] = if(val){1}else{0};
+    }
+    
+    def __get__(Action action)
+    {
+	if(this.action[action.__value]==1){1}else{?};
+    }
+    
+    def Object step(Float dt){
+	use(math);
+
+	if(this[Action::turnLeft])
+	{
+	    angle += dt*turnSpeed;
+	    if(angle >= 360)
+	    {
+		angle -= 360;
+	    }
+	}
+	
+	if(this[Action::turnRight])
+	{
+	    angle -= dt*turnSpeed;
+	    if(angle < 0)
+	    {
+		angle += 360;
+	    }
+	}	
+
+	def dot2(List«Float»a, List«Float» b)
+	{
+	    a[0]*b[0] + a[1]*b[1];
+	}
+
+        velFactor := reactionSpeed * dt;
+        slope := [0.0, 0.0];
+	world.scene.getSlope(pos[0], pos[1], slope);
+        dir := [cos(angle*pi/180), sin(angle*pi/180)];
+
+        mySlope := dot2(slope, dir);
+        slopeFactor := 1/(1+1.5*mySlope*mySlope + 0.5*mySlope);
+	//print(slopeFactor,"\n");
+	if(this[Action::walkForward])
+	{
+	    vt := [
+		cos(angle*pi/180)*walkSpeed,
+		sin(angle*pi/180)*walkSpeed
+		];
+
+	    vel[0] = vel[0]*(1.0-velFactor) + vt[0]*velFactor*slopeFactor;
+	    vel[1] = vel[1]*(1.0-velFactor) + vt[1]*velFactor*slopeFactor;
+	    
+
+	}
+	else
+	{      
+	    vel[0] = (1.0-velFactor)*vel[0];
+	    vel[1] = (1.0-velFactor)*vel[1];
+	}
+	pos[0] = pos[0] + vel[0]*dt;
+	pos[1] = pos[1] + vel[1]*dt;
+	pos[2] = world.scene.getHeight(pos[0], pos[1]);
+//	print(pos, "\n");
+    };
+
+}
+

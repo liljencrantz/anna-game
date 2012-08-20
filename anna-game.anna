@@ -26,19 +26,14 @@ def handleInput(World w)
 
 def main()
 {
-    print("Start");
     screen.init(640, 480, 0);
     render.init();
-    print("a");
     s := scene.Scene("anna", 1);
-    print("a0");
     w := World(s);
-    print("a1");
 
     w.player = Actor(w, ActorData(turnSpeed: 250.0, walkSpeed: 8.0, reactionSpeed: 10.0), "Bengt");
     
 //    print("AAA", primitives.ballTypeLoad("anna","ball1"), "\n");
-    print("a2");
     w.scene.cameraZ = 3.0;
     w.scene.cameraX  = 40.0;
     w.scene.cameraY  = 40.0;
@@ -46,7 +41,6 @@ def main()
     prev := time();
     framerate := 30.0;
     i := 1;
-    print("a3");
     while(1)
     {
         tm := time();
@@ -55,7 +49,7 @@ def main()
 	
 	if(i ^mod 300 == 0)
 	{
-	    print("Framerate is % fps\n" % [framerate]);
+	    print("Framerate is % fps" % [framerate]);
 	}
 	
 	use(screen);
@@ -72,7 +66,7 @@ def main()
 	w.scene.cameraZ = w.scene.getHeight(w.scene.cameraX, w.scene.cameraY)+3.0;
 	w.scene.cameraAngle += 0.05;
 	w.scene.render();
-	print(w.player.pos, "\n");
+//	print(w.player.pos, "\n");
 	screen.swapBuffers();
 	prev = tm;
 	i++;

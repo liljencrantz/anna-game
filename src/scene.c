@@ -533,18 +533,15 @@ static void scene_load_init(scene_t *s)
 	}
     ;
     
-    printf("load\n");
     if(snprintf(fname, BUFF_SZ, "data/%s/scene.asd", s->name) < BUFF_SZ)
     {
 	FILE *f = fopen(fname, "r");
 	if(f)
 	{
-	    printf("opened\n");
 	    size_t read = fread(s, sizeof(scene_head_t), 1, f);
 	    if((fclose(f)==0) && (read == 1))
 	    {
 
-		printf("opened\n");
 		size_t item_tile_side = ceilf(s->scene_size/ITEM_TILE_SIZE);
 
 		s->root_tile = scene_tile_load(s, &st);
@@ -558,11 +555,8 @@ static void scene_load_init(scene_t *s)
 		pthread_mutex_init(&sl->mutex, 0);
 		pthread_cond_init(&sl->convar, 0);
 				
-		printf("start reading tiles\n");
-
 		while(scene_try_load_tile(s))
 		    ;
-		printf("tiles read\n");
 		
 		int rc = pthread_create(
 		    &sl->thread, 

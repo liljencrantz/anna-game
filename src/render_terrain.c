@@ -141,12 +141,25 @@ static void vertex_perspective(
     {
 	float tmp = el->vertex[2];
 	el->vertex[2] +=render_height_correct(a,b);
-		
+	float sq_distance = a*a+b*b;
+
+	float factor = 0.2 + 0.8/(0.3*sq_distance+1.0);
+	unsigned char avg = (unsigned char)((1.0 - factor) * (((int)el->color[0]*2 + el->color[1] + el->color[2]) / 4));
+//	printf("ggg %d %f\n", avg, factor);
+	
+	unsigned char cl[] = { 
+	    el->color[0]*factor + avg,
+	    el->color[1]*factor + avg,
+	    el->color[2]*factor + avg
+	};
+	
+	    
+	
 	vd_add_vertex_v(
 	    vd,
 	    el->vertex,
 	    el->normal,
-	    el->color);
+	    cl);
 	el->vertex[2] = tmp;
 	
 	if(vd->vertex_count > idx0+1)

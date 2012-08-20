@@ -20,6 +20,8 @@
 #define TILE_NODE_OFFSET(level) (TILE_NODE_COUNT(level-1))
 #define TILE_HM_OFFSET(level) (TILE_HM_COUNT(level-1))
 #define TILE_SUBTILE_COUNT (1<<(2*TILE_LEVELS))
+#define FILE_DISC_SIZE (sizeof(t_node_t) * TILE_NODE_COUNT(TILE_LEVELS) + \
+			sizeof(heightmap_element_t) * TILE_HM_COUNT(TILE_LEVELS))
 
 struct tile
 {

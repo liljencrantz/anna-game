@@ -16,10 +16,10 @@ void render_init()
     GLenum err = glewInit();
     if (GLEW_OK != err)
     {
-	fwprintf(stderr, L"Error: %s\n", glewGetErrorString(err));
+	fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
 	exit(1);
     }
-    fwprintf(stdout, L"Using GLEW %s\n", glewGetString(GLEW_VERSION));
+    printf("Using GLEW %s\n", glewGetString(GLEW_VERSION));
 
 
     thread_set_render();    

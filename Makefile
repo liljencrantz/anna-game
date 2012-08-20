@@ -9,13 +9,13 @@ LDFLAGS := -lm -lpthread -rdynamic -lSDL -lSDL_image -lGL -lGLU  $(PROF_FLAGS) -
 
 RENDER_OBJS = src/render.o src/render_terrain.o src/render_trees.o src/tree.o src/render_balls.o src/ball.o src/ball_calc.o src/boid.o src/render_boids.o
 GENERATE_OBJS = src/tile_calc.o 
-ANNA_OBJS = $(GENERATE_OBJS) $(RENDER_OBJS) src/main.o src/screen.o src/scene.o src/tile.o src/node.o src/heightmap_element.o src/vertex_data.o src/thread.o autogen/annaGame.o src/util.o
+ANNA_OBJS = $(GENERATE_OBJS) $(RENDER_OBJS) src/main.o src/screen.o src/scene.o src/tile.o src/node.o src/heightmap_element.o src/vertex_data.o src/thread.o lib/annaGame.o src/util.o
 
 all: lib/annaGame.so
 .PHONY: all
 
-autogen/annaGame.c: bindings/annaGame.bind
-	annabind bindings/annaGame.bind >autogen/annaGame.c
+lib/annaGame.c: bindings/annaGame.bind
+	cd bindings && annabind annaGame.bind >../lib/annaGame.c
 
 lib/annaGame.so: $(ANNA_OBJS)
 	$(CC) -shared $(ANNA_OBJS) -o $@ $(LDFLAGS) 
@@ -33,6 +33,6 @@ endif
 #########################################################
 
 clean:
-	rm -f src/*.o src/*.d gmon.out autogen/*.c autogen/*.o lib/*.so
+	rm -f src/*.o src/*.d gmon.out lib/annaGame.c autogen/*.c autogen/*.o lib/*.so
 .PHONY: clean
 

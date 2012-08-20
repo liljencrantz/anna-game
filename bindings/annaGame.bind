@@ -2,7 +2,7 @@
 
 include(
     "\"screen.h\"", "\"scene.h\"", "\"render.h\"", 
-    "\"GL/glew.h\"", "\"GL/glu.h\"", "\"SDL/SDL.h\""
+    "\"GL/glew.h\"", "\"GL/glu.h\"", "\"SDL/SDL.h\"", "\"linalg.h\""
 );
 
 screen
@@ -58,6 +58,21 @@ scene
 
 primitives
 {
+    cStruct Transform (name(transform))
+    {
+	def Void __init__() (name(transform_init));
+	def Void identity() (name(transform_init));
+	def Float __get__(Int idx1, Int idx2) (name(transform_get));
+	def Float __set__(Int idx1, Int idx2, Float value) (name(transform_set));	
+//	def __mul__(Transform t) (name(transform_mul));
+    }
+
+    cStruct Vec (name(vec))
+    {
+//	def Float __get__(Int idx) (name(vec_get));
+//	def Float __set__(Int idx, Float value) (name(vec_set));	
+    }
+
     cStructPointer BallType (name(ball_type))
     {
  
@@ -66,11 +81,11 @@ primitives
 
 //	def Void calc() (name(ball_calc));
 //	def Void set(Int x, Int y, Float height, Float red, Float green, Float blue) (name(ball_type_set));
-
+	
 	def Void save(String directory, String name) (name(ball_type_save));     
-
+	
     }
-
+    
     def BallType ballTypeLoad(String directory, String name) (name(ball_type_load));
 //    def BallType ballTypeCreate(Int level, String name, Int alpha, XXX alloc) (name(ball_type_create));    
 
@@ -80,7 +95,7 @@ primitives
 	const BallType ballType (name(type));
 	var Float radius;
 	var Int visible;
-    }
-  
+	
+    }  
     
 }

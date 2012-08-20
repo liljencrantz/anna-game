@@ -139,13 +139,15 @@ static tile_t *scene_tile_load(scene_t *s, subtile_t *st)
     
     FILE *f = fopen(fn, "r");
     assert(f);
-    size_t read = fread(t, sizeof(tile_t)- sizeof(tile_t *) * TILE_SUBTILE_COUNT, 1, f);
+    size_t file_size = FILE_DISC_SIZE;
+    
+    size_t read = fread(t, file_size, 1, f);
     int cl = fclose(f);
     if(!((cl==0) && (read == 1)))
     {
 	printf(
-	    "Error reading file %s. Read %d units, close status was %d\n",
-	    fn, read, cl);
+	    "Error reading file %s. Read %d units of size %d, close status was %d\n",
+	    fn, (int)read, file_size, cl);
 	
 	exit(1);
     }
@@ -258,7 +260,7 @@ static int scene_find_missing_tile_from_position(
 		    hash_put(
 			&sl->used, 
 			*tile_ptr,
-			(void *)sl->current_lap);
+			(void *)(long)sl->current_lap);
 		}
 		
 	    }
@@ -310,7 +312,7 @@ static int scene_find_unneeded_tile_recursive(
     {
 	if(!has_subtile)
 	{
-	    if(sl->current_lap - (int)hash_get(&sl->used, t) > SCENE_UNLOAD_GRACE_PERIOD * s->target_fps)
+	    if(sl->current_lap - (int)(long)hash_get(&sl->used, t) > SCENE_UNLOAD_GRACE_PERIOD * s->target_fps)
 	    {
 		hash_remove(&sl->used, t, 0, 0);
 		return 1;
@@ -531,15 +533,18 @@ static void scene_load_init(scene_t *s)
 	}
     ;
     
+    printf("load\n");
     if(snprintf(fname, BUFF_SZ, "data/%s/scene.asd", s->name) < BUFF_SZ)
     {
 	FILE *f = fopen(fname, "r");
 	if(f)
 	{
+	    printf("opened\n");
 	    size_t read = fread(s, sizeof(scene_head_t), 1, f);
 	    if((fclose(f)==0) && (read == 1))
 	    {
 
+		printf("opened\n");
 		size_t item_tile_side = ceilf(s->scene_size/ITEM_TILE_SIZE);
 
 		s->root_tile = scene_tile_load(s, &st);
@@ -553,25 +558,28 @@ static void scene_load_init(scene_t *s)
 		pthread_mutex_init(&sl->mutex, 0);
 		pthread_cond_init(&sl->convar, 0);
 				
+		printf("start reading tiles\n");
 
 		while(scene_try_load_tile(s))
 		    ;
+		printf("tiles read\n");
 		
 		int rc = pthread_create(
 		    &sl->thread, 
 		    0,
 		    scene_load_runner, s);
 		
+
 		if(rc)
 		{
-		    wprintf(L"ERROR; return code from pthread_create() is %d\n", rc);
+		    printf("ERROR; return code from pthread_create() is %d\n", rc);
 		    exit(1);
 		}
 		return;
 	    }
 	}
     }
-    wprintf(L"Failed to load scene %s\n", s->name);
+    printf("Failed to load scene %s\n", s->name);
     exit(1);
 }
 
@@ -651,9 +659,9 @@ void scene_configure(
 
     printf(
 	"Each tile uses %d bytes for nodes, %d bytes for heightmaps and %d bytes for pointers\n",
-	sizeof(t_node_t) * TILE_NODE_COUNT(TILE_LEVELS),
-	sizeof(heightmap_element_t) * TILE_HM_COUNT(TILE_LEVELS),
-	sizeof(tile_t *) * TILE_SUBTILE_COUNT
+	(int)sizeof(t_node_t) * TILE_NODE_COUNT(TILE_LEVELS),
+	(int)sizeof(heightmap_element_t) * TILE_HM_COUNT(TILE_LEVELS),
+	(int)sizeof(tile_t *) * TILE_SUBTILE_COUNT
 	);
     
 
@@ -663,7 +671,7 @@ void scene_configure(
     s->root_tile = t;
     printf(
 	"%d tiles of %.2f kB each allocated. Used a total of %.2f megabytes of memory\n", 
-	res/sizeof(tile_t), ((float)sizeof(tile_t))/1024,
+	(int)(res/sizeof(tile_t)), ((float)sizeof(tile_t))/1024,
 	((double)res)/1024/1024);
 }
 

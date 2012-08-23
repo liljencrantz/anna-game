@@ -1,11 +1,20 @@
+attribute(
+    doc("Simple linear algebra types for use in the Anna game."));
 
-class Vec3
+class Vec
 {
     var MutableList«Float» vec;
-    
-    def __init__(Float x, Float y, Float z)
+    var Float absolute?;
+
+    def __init__(Float x, Float y, Float z, Object absolute? = 1)
     {
 	vec = [x,y,z];
+	this.absolute? = absolute? and 1.0;
+    }
+
+    def copy()
+    {
+	Vec(x, y, z);
     }
 
     def Float __get__(Int idx)
@@ -58,7 +67,30 @@ class Vec3
     {
 	String::convert(vec);
     }   
+
+    def __increaseAssign__(Vec other)
+    {
+	expandCode(
+	    %f += other.%f,
+	    f: [x, y, z]);
+	this;
+    }
     
+    def __add__(Vec other)
+    {
+        res := this.copy();
+	res += other;
+    }
+
+    def __mul__(Float factor)
+    {
+        res := this.copy();
+	expandCode(
+	    res.%f = %f * factor,
+	    f: [x, y, z]);
+	res;
+    }
+
 }
 
 class Transform
@@ -85,7 +117,7 @@ class Transform
 	       0.0,0.0,0.0,1.0];
     }
 
-    def __mul__(Transform t)
+    def mulTransform(Transform transform) (alias(__mul__))
     {
 	var res = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 	(0..4).each(x)
@@ -94,10 +126,27 @@ class Transform
 	    {
 		(0..4).each(a)
 		{	
-		    res[y+4*(x)] = res[y+4*(x)] + vec[y+4*(a)]*t.vec[a+4*(x-1)];
+		    res[y+4*(x)] = res[y+4*(x)] + vec[y+4*(a)]*transform.vec[a+4*(x-1)];
 		}
 	    }
 	}
     }    
+
+    def mulVector(Vec t) (alias(__mul__))
+    {
+	Vec(
+	    t.x * vec[0] + t.y * vec[1] + t.z * vec[2] + t.absolute? * vec[3],
+	    t.x * vec[4] + t.y * vec[5] + t.z * vec[6] + t.absolute? * vec[7],
+	    t.x * vec[8] + t.y * vec[9] + t.z * vec[10] + t.absolute? * vec[11],
+	    );
+    }    
+
+    def toString()
+    {
+	return "%\t%\t%\t%
+%\t%\t%\t%
+%\t%\t%\t%
+%\t%\t%\t%" % vec;
+    }
     
 }

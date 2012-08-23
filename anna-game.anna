@@ -31,7 +31,13 @@ def main()
     s := scene.Scene("anna", 1);
     w := World(s);
 
-    w.player = Actor(w, ActorData(turnSpeed: 250.0, walkSpeed: 8.0, reactionSpeed: 10.0), "Bengt");
+  player := Player(
+      world:w, 
+      data: ActorData(turnSpeed: 3.0, walkSpeed: 8.0, reactionSpeed: 10.0),
+      name: "Bengt", 
+      pos: Vec(100.0, 100.0, 0.0),
+      );
+    w.player = player;
     
 //    print("AAA", primitives.ballTypeLoad("anna","ball1"), "\n");
     w.scene.cameraZ = 3.0;
@@ -53,6 +59,7 @@ def main()
 	}
 	
 	use(screen);
+	use(math);
 	checkInput();
 	if(keyGet(key.escape))
 	{
@@ -62,9 +69,54 @@ def main()
 	handleInput(w);
 
 	w.step(dt);
-	w.scene.cameraX += dt;
-	w.scene.cameraZ = w.scene.getHeight(w.scene.cameraX, w.scene.cameraY)+3.0;
-	w.scene.cameraAngle += 0.05;
+//	w.scene.cameraX += dt;
+//	w.scene.cameraZ = w.scene.getHeight(w.scene.cameraX, w.scene.cameraY)+3.0;
+//	w.scene.cameraAngle += 0.05;
+	  ca := s.cameraAngle*pi/180;
+
+	if(player[Action::walkForward])
+	{
+	    pi2 :== 2.0*math.pi;
+	  acs := 1.0 - 0.3*dt;
+	  pa := player.angle;
+	    if(pa > ca+math.pi)
+	    {
+		ca = acs*ca + (1.0-acs)*(pa-pi2);
+		if (ca < 0.0)
+		{
+		    ca = ca + pi2;
+		}
+		else
+		{
+		    if (pa < ca-pi)
+		    {
+			ca = acs*ca + (1.0-acs)*(pa+pi2);
+			if (ca > pi2)
+			{
+			    ca = ca - pi2;
+			}
+		    }
+		}
+	    }
+	    else
+	    {
+		ca = acs*ca + (1.0-acs)*pa;
+	    }
+	    s.cameraAngle = ca*180/math.pi;
+	}
+
+        cameraDistance :== 5.0;
+        cPos := player.pos.copy();
+	cPos[0] -= cameraDistance * math.cos(ca);
+	cPos[1] -= cameraDistance * math.sin(ca);
+	
+	def max(Float a, Float b)
+	{
+	    if(a>b){ a } else { b }
+	}
+	cPos[2] = max(cPos[2], s.getHeight(cPos[0],cPos[1])) + 8;
+	
+	w.camera = w.camera*0.9 + cPos*0.1;
 	w.scene.render();
 //	print(w.player.pos, "\n");
 	screen.swapBuffers();

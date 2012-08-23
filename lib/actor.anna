@@ -27,8 +27,8 @@ class Actor
 {
     var World world;
     
-    var Vec3 pos;
-    var Vec3 vel;
+    var Vec pos;
+    var Vec vel;
     var Transform transform;
     var Float angle;
     
@@ -39,14 +39,14 @@ class Actor
     
     def __init__(
 	World world, ActorData data, String name, 
-	Vec3 pos = ?, Vec3 vel = ?, Float angle=?, 
+	Vec pos = ?, Vec vel = ?, Float angle=?, 
 	Transform transform=?)
     {
 	this.world = world;
 	expandCode(
 	    this.%name = %name or %init,
 	    name:[pos, vel, transform, name, data, angle],
-	    init: [Vec3(0.0, 0.0, 0.0), Vec3(0.0, 0.0, 0.0), Transform(), "", ?, 0.0]
+	    init: [Vec(0.0, 0.0, 0.0), Vec(0.0, 0.0, 0.0), Transform(), "", ?, 0.0]
 	    );
 	world.add(this);
 	action = Buffer();
@@ -83,9 +83,9 @@ class Actor
 	if(this[Action::turnLeft])
 	{
 	    angle += dt*turnSpeed;
-	    if(angle >= 360)
+	    if(angle >= 2.0*math.pi)
 	    {
-		angle -= 360;
+		angle -= 2.0*math.pi;
 	    }
 	}
 	
@@ -94,9 +94,9 @@ class Actor
 	    angle -= dt*turnSpeed;
 	    if(angle < 0)
 	    {
-		angle += 360;
+		angle += 2.0*math.pi;
 	    }
-	}	
+	}
 
 	def dot2(List«Float»a, List«Float» b)
 	{
@@ -106,21 +106,19 @@ class Actor
         velFactor := reactionSpeed * dt;
         slope := [0.0, 0.0];
 	world.scene.getSlope(pos[0], pos[1], slope);
-        dir := [cos(angle*pi/180), sin(angle*pi/180)];
-
+        dir := [cos(angle), sin(angle)];
         mySlope := dot2(slope, dir);
         slopeFactor := 1/(1+1.5*mySlope*mySlope + 0.5*mySlope);
 	//print(slopeFactor,"\n");
 	if(this[Action::walkForward])
 	{
 	    vt := [
-		cos(angle*pi/180)*walkSpeed,
-		sin(angle*pi/180)*walkSpeed
+		cos(angle)*walkSpeed,
+		sin(angle)*walkSpeed
 		];
 
 	    vel[0] = vel[0]*(1.0-velFactor) + vt[0]*velFactor*slopeFactor;
 	    vel[1] = vel[1]*(1.0-velFactor) + vt[1]*velFactor*slopeFactor;
-	    
 
 	}
 	else
@@ -131,8 +129,24 @@ class Actor
 	pos[0] = pos[0] + vel[0]*dt;
 	pos[1] = pos[1] + vel[1]*dt;
 	pos[2] = world.scene.getHeight(pos[0], pos[1]);
-//	print(pos, "\n");
+	//	print(pos);
     };
 
 }
 
+class Player (extends(Actor))
+{
+
+    def __init__(
+	World world, ActorData data, String name, 
+	Vec pos = ?, Vec vel = ?, Float angle=?, 
+	Transform transform=?)
+    {
+	Actor::__init__(this, world, data, name, pos, vel, angle, transform);
+    }
+
+    def Object step(Float dt){
+	Actor::step(this, dt);
+    }
+
+}

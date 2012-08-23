@@ -1,5 +1,6 @@
 use(annaGame.scene);
 use(actor);
+use(linalg);
 
 class Stepable
 {
@@ -8,8 +9,6 @@ class Stepable
 
 class World
 {
-    
-//    var annaGame.scene.Scene scene;
     var Scene scene;
     
     var MutableList«Actor» actor;
@@ -58,19 +57,19 @@ class World
 	}
     }
 
-    def cameraSetter(List«Float» val)
+    def cameraSetter(Vec val)
     {
-	scene.cameraX = val[0];
-	scene.cameraY = val[1];
-	scene.cameraZ = val[2];
+	scene.cameraX = val.x;
+	scene.cameraY = val.y;
+	scene.cameraZ = val.z;
     }
 
     def cameraGetter()
     {
-	[scene.cameraX, scene.cameraY, scene.cameraZ]
+	Vec(scene.cameraX, scene.cameraY, scene.cameraZ)
     }
 
-    var List«Float» camera (property(cameraGetter, cameraSetter));
+    var Vec camera (property(cameraGetter, cameraSetter));
 
 }
 
